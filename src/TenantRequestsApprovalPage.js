@@ -1,0 +1,147 @@
+// TenantRequestsApprovalPage.js
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { auth, db } from './firebase';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+} from 'firebase/firestore';
+
+export default function TenantRequestsApprovalPage() {
+  const [requests, setRequests] = useState([]);
+  const [user, setUser] = useState(null);
+  const [firstName, setFirstName] = useState('');
+  const [dark, setDark] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setDark(mq.matches);
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (dark) root.classList.add('dark');
+    else root.classList.remove('dark');
+  }, [dark]);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (u) => {
+      setUser(u);
+      if (u) {
+        const snap = await getDoc(doc(db, 'Users', u.uid));
+        if (snap.exists()) {
+          setFirstName(snap.data().first_name || '');
+          const email = u.email;
+          const q = query(
+            collection(db, 'TenantRequests'),
+            where('landlord_email', '==', email),
+            where('status', '==', 'Pending')
+          );
+          const snapshot = await getDocs(q);
+
+          const requestsWithNames = await Promise.all(
+            snapshot.docs.map(async (d) => {
+              const req = d.data();
+              const userSnap = await getDoc(doc(db, 'Users', req.tenant_uid));
+              return {
+                id: d.id,
+                tenant_uid: req.tenant_uid,
+                tenant_name: userSnap.exists() ? userSnap.data().first_name : 'Unknown',
+                created_at: req.created_at,
+              };
+            })
+          );
+
+          setRequests(requestsWithNames);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleApprove = async (req) => {
+    await updateDoc(doc(db, 'Users', req.tenant_uid), { status: 'Active' });
+    await updateDoc(doc(db, 'TenantRequests', req.id), { status: 'Approved' });
+    setRequests((prev) => prev.filter((r) => r.id !== req.id));
+  };
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    navigate('/signin');
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
+      {/* Header */}
+      <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800">
+        <div className="w-full flex items-center justify-between px-2 md:px-4 lg:px-6 py-4">
+          <h1
+            className="text-2xl font-bold cursor-pointer"
+            onClick={() => navigate('/')}
+          >
+            EasyLease
+          </h1>
+          <div className="hidden md:flex items-center space-x-6">
+            {firstName && <span>{firstName}</span>}
+            <button
+              onClick={handleLogout}
+              className="px-6 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-700 hover:scale-105 transform transition"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
+        {/* Sidebar */}
+        <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-[calc(100vh-5rem)] justify-between">
+          <nav className="px-4 space-y-2 mt-4">
+            <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏠 Dashboard</a>
+            <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
+            <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
+            <a href="/approve-requests" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">✅ Approve Requests</a>
+            <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
+            <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments</a>
+            <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
+            <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📊 Analytics</a>
+            <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">⚙️ Settings</a>
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col p-6">
+          <h2 className="text-2xl font-bold mb-6">Pending Tenant Requests</h2>
+          {requests.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400">No pending requests at this time.</p>
+          ) : (
+            <ul className="space-y-4">
+              {requests.map((req) => (
+                <li key={req.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow flex items-center justify-between">
+                  <div>
+                    <p className="text-lg font-medium">{req.tenant_name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Requested on: {req.created_at?.seconds ? new Date(req.created_at.seconds * 1000).toLocaleString() : 'N/A'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleApprove(req)}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  >
+                    Approve
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

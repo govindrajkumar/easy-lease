@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from './firebase';
-import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where, deleteDoc } from 'firebase/firestore';
 
 
 export default function PropertiesPage() {
@@ -26,6 +26,9 @@ export default function PropertiesPage() {
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [dark, setDark] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const navigate = useNavigate();
 
   // System theme detection (set once on mount)
@@ -101,14 +104,20 @@ export default function PropertiesPage() {
     setAddLoading(true);
 
     // Basic validation
-    if (!newProperty.name.trim() || !newProperty.address_line1.trim() || !newProperty.city.trim() || !newProperty.province.trim() || !newProperty.zip_code.trim()) {
+    if (
+      !newProperty.name.trim() ||
+      !newProperty.address_line1.trim() ||
+      !newProperty.city.trim() ||
+      !newProperty.province.trim() ||
+      !newProperty.zip_code.trim()
+    ) {
       setAddError('Please fill all required fields.');
       setAddLoading(false);
       return;
     }
 
     try {
-      await addDoc(collection(db, 'Properties'), {
+      const docRef = await addDoc(collection(db, 'Properties'), {
         name: newProperty.name,
         description: newProperty.description,
         address_line1: newProperty.address_line1,
@@ -120,6 +129,13 @@ export default function PropertiesPage() {
         updated_at: serverTimestamp(),
         landlord_id: user?.uid || '',
       });
+
+      // Fetch the new property with its ID and all fields
+      const snap = await getDoc(doc(db, 'Properties', docRef.id));
+      if (snap.exists()) {
+        setProperties((prev) => [{ id: snap.id, ...snap.data() }, ...prev]);
+      }
+
       setAddSuccess('Property added successfully!');
       setNewProperty({
         name: '',
@@ -138,6 +154,21 @@ export default function PropertiesPage() {
       setAddError('Failed to add property. Please try again.');
     }
     setAddLoading(false);
+  };
+
+  // Delete property handler
+  const handleDeleteProperty = async () => {
+    if (!deleteId) return;
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      await deleteDoc(doc(db, 'Properties', deleteId));
+      setProperties((prev) => prev.filter((p) => p.id !== deleteId));
+      setDeleteId(null);
+    } catch (err) {
+      setDeleteError('Failed to delete property. Please try again.');
+    }
+    setDeleteLoading(false);
   };
 
   return (
@@ -205,6 +236,7 @@ export default function PropertiesPage() {
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Address</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">City</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Province</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y dark:divide-gray-700">
@@ -212,21 +244,47 @@ export default function PropertiesPage() {
                   <tr
                     key={prop.id}
                     className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                    onClick={() => openDetail(prop)}
                   >
-                    <td className="px-6 py-4 text-sm dark:text-gray-100">{prop.name}</td>
-                    <td className="px-6 py-4 text-sm dark:text-gray-100">
+                    <td
+                      className="px-6 py-4 text-sm dark:text-gray-100"
+                      onClick={() => openDetail(prop)}
+                    >
+                      {prop.name}
+                    </td>
+                    <td
+                      className="px-6 py-4 text-sm dark:text-gray-100"
+                      onClick={() => openDetail(prop)}
+                    >
                       {prop.address_line1
                         ? prop.address_line1
                         : <span className="italic text-gray-400 dark:text-gray-500">No address</span>}
                     </td>
-                    <td className="px-6 py-4 text-sm dark:text-gray-100">{prop.city || <span className="italic text-gray-400 dark:text-gray-500">—</span>}</td>
-                    <td className="px-6 py-4 text-sm dark:text-gray-100">{prop.province || <span className="italic text-gray-400 dark:text-gray-500">—</span>}</td>
+                    <td
+                      className="px-6 py-4 text-sm dark:text-gray-100"
+                      onClick={() => openDetail(prop)}
+                    >
+                      {prop.city || <span className="italic text-gray-400 dark:text-gray-500">—</span>}
+                    </td>
+                    <td
+                      className="px-6 py-4 text-sm dark:text-gray-100"
+                      onClick={() => openDetail(prop)}
+                    >
+                      {prop.province || <span className="italic text-gray-400 dark:text-gray-500">—</span>}
+                    </td>
+                    <td className="px-6 py-4 text-sm dark:text-gray-100">
+                      <button
+                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                        onClick={() => setDeleteId(prop.id)}
+                        disabled={deleteLoading}
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {properties.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-gray-400 dark:text-gray-500">
+                    <td colSpan={5} className="px-6 py-8 text-center text-gray-400 dark:text-gray-500">
                       No properties found.
                     </td>
                   </tr>
@@ -485,6 +543,40 @@ export default function PropertiesPage() {
                     ))}
                   </ul>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteId && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md relative">
+              <button
+                className="absolute top-4 right-4 text-gray-500 dark:text-gray-300 text-2xl"
+                onClick={() => setDeleteId(null)}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+              <h2 className="text-xl font-semibold mb-4 dark:text-gray-100">Delete Property</h2>
+              <p className="mb-4 dark:text-gray-200">Are you sure you want to delete this property? This action cannot be undone.</p>
+              {deleteError && <div className="text-red-500 mb-2">{deleteError}</div>}
+              <div className="flex justify-end space-x-2">
+                <button
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 rounded"
+                  onClick={() => setDeleteId(null)}
+                  disabled={deleteLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 bg-red-600 text-white rounded dark:bg-red-700"
+                  onClick={handleDeleteProperty}
+                  disabled={deleteLoading}
+                >
+                  {deleteLoading ? 'Deleting...' : 'Yes, Delete'}
+                </button>
               </div>
             </div>
           </div>

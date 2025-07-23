@@ -70,6 +70,7 @@ export default function SignUp() {
         email: form.email,
         phone: form.phone || "",
         role: form.role,
+        status: form.role === 'tenant' ? 'Inactive' : 'Active',
         created_at: serverTimestamp(),
         updated_at: serverTimestamp()
       });

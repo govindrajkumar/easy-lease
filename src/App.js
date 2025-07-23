@@ -7,6 +7,7 @@ import PrivateRoute from './PrivateRoute';
 import PropertiesPage from './PropertiesPage';
 import LandingPage from './LandingPage'; 
 import SignIn from './Signin';
+import TenantRequestsApprovalPage from './TenantRequestsApprovalPage';
 
 function App() {
   return (
@@ -14,10 +15,11 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage/>} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/properties" element={<PropertiesPage />} />
         <Route path="/signin" element={<SignIn />} />
         <Route element={<PrivateRoute />}>
           <Route path="/landlord-dashboard" element={<LandlordDashboard />} />
+          <Route path="/properties" element={<PropertiesPage />} />
+          <Route path="/approve-requests" element={<TenantRequestsApprovalPage />} />
           <Route path="/tenant-dashboard" element={<TenantDashboard />} />
         </Route>
       </Routes>
