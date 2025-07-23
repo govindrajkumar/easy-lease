@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useTheme } from './ThemeContext';
 import './index.css'; // Assuming you'll move the CSS here or use Tailwind CSS directly
 
 function AuthPage() {
-  const [dark, setDark] = useState(false);
+  const { darkMode, toggleDarkMode } = useTheme();
   const [mode, setMode] = useState('signin'); // 'signin' or 'signup'
   const [form, setForm] = useState({
     role: 'landlord',
@@ -16,14 +17,6 @@ function AuthPage() {
   });
   const [showPass, setShowPass] = useState(false);
 
-  // Effect to apply dark mode class to body
-  useEffect(() => {
-    if (dark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [dark]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -50,16 +43,16 @@ function AuthPage() {
   };
 
   return (
-    <div className={`antialiased transition-colors duration-500 ${dark ? 'dark' : ''}`}>
+    <div className={`antialiased transition-colors duration-500 ${darkMode ? 'dark' : ''}`}>
       <body className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col min-h-screen">
         {/* Header */}
         <header className="bg-white dark:bg-gray-800 shadow-md fixed w-full z-10">
           <div className="container mx-auto flex items-center justify-between px-6 py-4">
-            <span className="text-2xl font-bold cursor-pointer" onClick={() => setDark(!dark)}>
+            <span className="text-2xl font-bold cursor-pointer" onClick={toggleDarkMode}>
               EasyLease
             </span>
-            <button onClick={() => setDark(!dark)} aria-label="Toggle dark mode" className="p-2 rounded focus:outline-none">
-              {dark ? (
+            <button onClick={toggleDarkMode} aria-label="Toggle dark mode" className="p-2 rounded focus:outline-none">
+              {darkMode ? (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-300" fill="currentColor">
                   <path d="M10 2a8 8 0 017.446 4.908A6 6 0 1010 2z" />
                 </svg>

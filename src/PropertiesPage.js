@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from './ThemeContext';
 import { auth, db } from './firebase';
 import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where, deleteDoc } from 'firebase/firestore';
 
@@ -25,24 +26,13 @@ export default function PropertiesPage() {
   const [currentTab, setCurrentTab] = useState('overview');
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
-  const [dark, setDark] = useState(false);
+  const { darkMode } = useTheme();
   const [deleteId, setDeleteId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const navigate = useNavigate();
 
   // System theme detection (set once on mount)
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    setDark(mq.matches);
-  }, []);
-
-  // Apply dark mode class to root
-  useEffect(() => {
-    const root = document.documentElement;
-    if (dark) root.classList.add('dark');
-    else root.classList.remove('dark');
-  }, [dark]);
 
   // Auth and fetch first name
   useEffect(() => {
@@ -179,7 +169,6 @@ export default function PropertiesPage() {
                       <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">🏠 Dashboard</a>
             <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
             <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
-            <a href="/approve-requests" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">✅ Approve Requests</a>
             <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
             <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
             <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>

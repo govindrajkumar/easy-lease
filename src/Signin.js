@@ -1,24 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useTheme } from './ThemeContext';
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "./firebase"; // adjust path if needed
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function SignIn() {
-  const [dark, setDark] = useState(false);
+  const { darkMode, toggleDarkMode } = useTheme();
   const [error, setError] = useState(null);
   const [showPass, setShowPass] = useState(false);
   const [form, setForm] = useState({ email: '', password: '', remember: false });
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (dark) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [dark]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -72,11 +65,11 @@ export default function SignIn() {
             EasyLease
           </h1>
           <button
-            onClick={() => setDark(!dark)}
+            onClick={toggleDarkMode}
             aria-label="Toggle theme"
             className="p-2 rounded focus:outline-none"
           >
-            {dark ? (
+            {darkMode ? (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-6 w-6 text-yellow-300"

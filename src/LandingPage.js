@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTheme } from './ThemeContext';
 import { Link } from 'react-router-dom';
 import './App.css'; // Tailwind CSS should be configured here
 
 function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [dark, setDark] = useState(false);
+  const { darkMode, toggleDarkMode } = useTheme();
   const [activeSection, setActiveSection] = useState('home');
 
   // Refs for sections
@@ -36,8 +37,8 @@ function LandingPage() {
 
   // Dark mode toggle
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark);
-  }, [dark]);
+    document.documentElement.classList.toggle('dark', darkMode);
+  }, [darkMode]);
 
   // Testimonials data
   const testimonialsData = [
@@ -51,7 +52,7 @@ function LandingPage() {
       {/* Header */}
       <header className={`fixed w-full z-50 backdrop-blur-lg bg-white dark:bg-gray-900 transition-shadow ${scrolled ? 'shadow-xl' : ''}`}>  
         <div className="container mx-auto flex items-center justify-between px-6 lg:px-8 py-4">
-          <button onClick={() => setDark(!dark)} className="text-2xl font-extrabold focus:outline-none">
+          <button onClick={toggleDarkMode} className="text-2xl font-extrabold focus:outline-none">
             EasyLease
           </button>
           <nav className="hidden md:flex space-x-10 text-lg font-medium">

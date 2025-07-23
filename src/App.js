@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { ThemeProvider } from './ThemeContext';
 import Signup from './Signup';
 import LandlordDashboard from './LandlordDashboard';
 import TenantDashboard from './TenantDashboard';
@@ -16,8 +17,9 @@ import SettingsPage from './SettingsPage';
 
 function App() {
   return (
-    <Router>
-      <Routes>
+    <ThemeProvider>
+      <Router>
+        <Routes>
         <Route path="/" element={<LandingPage/>} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/signin" element={<SignIn />} />
@@ -34,6 +36,7 @@ function App() {
         </Route>
       </Routes>
     </Router>
+    </ThemeProvider>
   );
 }
 
