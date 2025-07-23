@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
-import { auth } from './firebase';
+import React, { useState, useEffect } from 'react';
+import { auth, db } from './firebase';
 import { updatePassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { useTheme } from './ThemeContext';
 
 export default function SettingsPage() {
   const [tab, setTab] = useState('profile');
   const [profile, setProfile] = useState({
-    name: 'John Smith',
-    email: 'john@example.com',
+    name: '',
+    email: '',
     password: ''
   });
+  const [user, setUser] = useState(null);
+  const [firstName, setFirstName] = useState('');
   const { darkMode, toggleDarkMode } = useTheme();
 
   const [notifications, setNotifications] = useState({
@@ -29,6 +32,27 @@ export default function SettingsPage() {
     email: true,
     sms: false
   });
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (u) => {
+      setUser(u);
+      if (u) {
+        try {
+          const snap = await getDoc(doc(db, 'Users', u.uid));
+          if (snap.exists()) {
+            const data = snap.data();
+            setFirstName(data.first_name || '');
+            setProfile((prev) => ({ ...prev, name: data.first_name || '', email: u.email || '' }));
+          } else {
+            setProfile((prev) => ({ ...prev, email: u.email || '' }));
+          }
+        } catch {
+          setProfile((prev) => ({ ...prev, email: u.email || '' }));
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
 
   const saveAll = () => {
@@ -62,25 +86,25 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="antialiased bg-gray-50 text-gray-800 flex h-screen overflow-hidden">
+    <div className="antialiased bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white shadow-lg pt-20 flex-shrink-0">
+      <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg pt-20 flex-shrink-0">
         <nav className="flex-1 px-4 space-y-2">
-          <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">🏠 Dashboard</a>
-          <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">🏢 Properties</a>
-          <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">👥 Tenants</a>
-          <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">🔔 Announcements</a>
-          <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">💳 Payments & Billing</a>
-          <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">🛠️ Maintenance</a>
-          <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">📊 Analytics</a>
-          <a href="/settings" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700">⚙️ Settings</a>
+          <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏠 Dashboard</a>
+          <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
+          <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
+          <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
+          <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
+          <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
+          <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📊 Analytics</a>
+          <a href="/settings" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">⚙️ Settings</a>
         </nav>
-        <div className="px-6 py-4 border-t">
+        <div className="px-6 py-4 border-t dark:border-gray-700">
           <div className="flex items-center space-x-3">
             <span className="text-xl">👤</span>
             <div>
-              <div className="font-medium">{profile.name}</div>
-              <div className="text-sm text-gray-500">{profile.email}</div>
+              <div className="font-medium dark:text-gray-100">{firstName || 'User'}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{user?.email || ''}</div>
             </div>
           </div>
         </div>
@@ -88,20 +112,25 @@ export default function SettingsPage() {
 
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white p-6 fixed top-0 left-0 right-0 z-20 flex items-center justify-between">
+        <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-6 dark:from-gray-900 dark:to-gray-800">
           <div className="text-2xl font-bold">EasyLease</div>
-          <button onClick={saveAll}
-                  className="px-4 py-2 bg-green-400 hover:bg-green-500 rounded-full font-semibold">
-            Save All Changes
-          </button>
+          <div className="hidden md:flex items-center space-x-6">
+            {firstName && <span className="font-medium text-white dark:text-gray-100">{firstName}</span>}
+            <button
+              onClick={saveAll}
+              className="px-4 py-2 bg-green-400 hover:bg-green-500 rounded-full font-semibold"
+            >
+              Save All Changes
+            </button>
+          </div>
         </header>
 
         {/* Content */}
         <main className="pt-24 p-6 mx-6 overflow-auto">
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
 
             {/* Tabs */}
-            <nav className="bg-gray-50 px-6 py-4 border-b flex space-x-8">
+            <nav className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b dark:border-gray-700 flex space-x-8">
               {['profile','notifications','integrations'].map(key => (
                 <button key={key}
                         onClick={() => setTab(key)}
