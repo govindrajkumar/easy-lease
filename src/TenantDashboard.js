@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from './firebase';
-import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 
 export default function TenantDashboard() {
   const navigate = useNavigate();
@@ -11,24 +11,8 @@ export default function TenantDashboard() {
   const [requestSent, setRequestSent] = useState(false);
   const [sendingRequest, setSendingRequest] = useState(false);
 
-  const tenantData = {
-    overview: {
-      nextDue: { amount: '$1,200', date: 'Jul 1, 2025' },
-      lease: { start: 'Jan 1, 2025', end: 'Dec 31, 2025', daysLeft: 210 },
-      maintenanceOpen: 2,
-    },
-    lease: {
-      property: '123 Main St, Cityville, ON',
-      rent: '$1,200',
-      landlord: { name: 'Jane Doe', email: 'jane@landlord.com', phone: '555-1234' },
-      utilities: 'Water & Trash included; Tenant pays electricity & gas',
-    },
-    history: [
-      { date: 'Jun 1, 2025', amount: '$1,200', status: 'Paid', receiptUrl: '#' },
-      { date: 'May 1, 2025', amount: '$1,200', status: 'Paid', receiptUrl: '#' },
-      { date: 'Apr 1, 2025', amount: '$1,200', status: 'Paid', receiptUrl: '#' },
-    ],
-  };
+  const [property, setProperty] = useState(null);
+  const [lease, setLease] = useState(null);
 
   const userFirstName = sessionStorage.getItem('user_first_name');
   const userEmail = sessionStorage.getItem('user_email');
@@ -61,6 +45,32 @@ export default function TenantDashboard() {
 
     fetchUserStatus();
   }, [navigate]);
+
+  useEffect(() => {
+    const fetchLeaseInfo = async () => {
+      if (status !== 'Active') return;
+      const user = auth.currentUser;
+      if (!user) return;
+      const propQuery = query(collection(db, 'Properties'), where('tenant_uid', '==', user.uid));
+      const propSnap = await getDocs(propQuery);
+      if (!propSnap.empty) {
+        const propDoc = propSnap.docs[0];
+        const propData = { id: propDoc.id, ...propDoc.data() };
+        setProperty(propData);
+        const leaseQuery = query(
+          collection(db, 'Leases'),
+          where('tenant_uid', '==', user.uid),
+          where('property_id', '==', propDoc.id)
+        );
+        const leaseSnap = await getDocs(leaseQuery);
+        if (!leaseSnap.empty) {
+          const leaseDoc = leaseSnap.docs[0];
+          setLease({ id: leaseDoc.id, ...leaseDoc.data() });
+        }
+      }
+    };
+    fetchLeaseInfo();
+  }, [status]);
 
   const handleLogout = () => {
     sessionStorage.clear();
@@ -175,7 +185,7 @@ export default function TenantDashboard() {
   }
 
   // Active dashboard rendering below...
-  const notAssigned = !tenantData.lease.property;
+
 
 
   return (
@@ -224,20 +234,28 @@ export default function TenantDashboard() {
             {/* Render main dashboard (Active tenant) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                <h3 className="text-sm text-gray-500 dark:text-gray-400">Next Rent Due</h3>
-                <p className="text-2xl font-semibold mt-2 dark:text-gray-100">{tenantData.overview.nextDue.amount}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Due on {tenantData.overview.nextDue.date}</p>
+                <h3 className="text-sm text-gray-500 dark:text-gray-400">Property</h3>
+                <p className="text-2xl font-semibold mt-2 dark:text-gray-100">{property ? property.name : 'N/A'}</p>
+                {property && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{property.address_line1}</p>
+                )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                 <h3 className="text-sm text-gray-500 dark:text-gray-400">Lease Period</h3>
-                <p className="text-2xl font-semibold mt-2 dark:text-gray-100">
-                  {tenantData.overview.lease.start} – {tenantData.overview.lease.end}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{tenantData.overview.lease.daysLeft} days left</p>
+                {lease ? (
+                  <>
+                    <p className="text-2xl font-semibold mt-2 dark:text-gray-100">
+                      {lease.start_date} – {lease.end_date}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Rent: ${lease.rent_amount}</p>
+                  </>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400">N/A</p>
+                )}
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                <h3 className="text-sm text-gray-500 dark:text-gray-400">Open Maintenance</h3>
-                <p className="text-2xl font-semibold mt-2 dark:text-gray-100">{tenantData.overview.maintenanceOpen}</p>
+                <h3 className="text-sm text-gray-500 dark:text-gray-400">Security Deposit</h3>
+                <p className="text-2xl font-semibold mt-2 dark:text-gray-100">{lease ? `$${lease.security_deposit}` : 'N/A'}</p>
               </div>
             </div>
           </main>
