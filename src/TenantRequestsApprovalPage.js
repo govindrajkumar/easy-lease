@@ -16,6 +16,11 @@ export default function TenantRequestsApprovalPage() {
   const [requests, setRequests] = useState([]);
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
+  const [properties, setProperties] = useState([]);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [selectedPropertyId, setSelectedPropertyId] = useState('');
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignLoading, setAssignLoading] = useState(false);
   const [dark, setDark] = useState(false);
   const navigate = useNavigate();
 
@@ -59,16 +64,38 @@ export default function TenantRequestsApprovalPage() {
           );
 
           setRequests(requestsWithNames);
+
+          const propQuery = query(
+            collection(db, 'Properties'),
+            where('landlord_id', '==', u.uid)
+          );
+          const propSnapshot = await getDocs(propQuery);
+          const props = propSnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setProperties(props);
         }
       }
     });
     return () => unsubscribe();
   }, []);
 
-  const handleApprove = async (req) => {
-    await updateDoc(doc(db, 'Users', req.tenant_uid), { status: 'Active' });
-    await updateDoc(doc(db, 'TenantRequests', req.id), { status: 'Approved' });
-    setRequests((prev) => prev.filter((r) => r.id !== req.id));
+  const openAssignModal = (req) => {
+    setSelectedRequest(req);
+    setSelectedPropertyId('');
+    setShowAssignModal(true);
+  };
+
+  const handleAssign = async () => {
+    if (!selectedRequest || !selectedPropertyId) return;
+    setAssignLoading(true);
+    try {
+      await updateDoc(doc(db, 'Users', selectedRequest.tenant_uid), { status: 'Active' });
+      await updateDoc(doc(db, 'Properties', selectedPropertyId), { tenant_uid: selectedRequest.tenant_uid });
+      await updateDoc(doc(db, 'TenantRequests', selectedRequest.id), { status: 'Approved' });
+      setRequests((prev) => prev.filter((r) => r.id !== selectedRequest.id));
+      setShowAssignModal(false);
+    } finally {
+      setAssignLoading(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -131,7 +158,7 @@ export default function TenantRequestsApprovalPage() {
                     </p>
                   </div>
                   <button
-                    onClick={() => handleApprove(req)}
+                    onClick={() => openAssignModal(req)}
                     className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                   >
                     Approve
@@ -142,6 +169,43 @@ export default function TenantRequestsApprovalPage() {
           )}
         </div>
       </div>
+      {showAssignModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4 dark:text-gray-100">Assign Property</h3>
+            <select
+              value={selectedPropertyId}
+              onChange={(e) => setSelectedPropertyId(e.target.value)}
+              className="w-full border rounded p-2 mb-4 dark:bg-gray-900 dark:text-gray-100"
+            >
+              <option value="" disabled>
+                Select property
+              </option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <div className="flex justify-end space-x-2">
+              <button
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 rounded"
+                onClick={() => setShowAssignModal(false)}
+                disabled={assignLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                onClick={handleAssign}
+                disabled={!selectedPropertyId || assignLoading}
+              >
+                {assignLoading ? 'Assigning...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
