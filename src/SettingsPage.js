@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { auth } from './firebase';
+import { updatePassword } from 'firebase/auth';
 
 export default function SettingsPage() {
   const [tab, setTab] = useState('profile');
@@ -7,6 +9,7 @@ export default function SettingsPage() {
     email: 'john@example.com',
     password: ''
   });
+  const [darkMode, setDarkMode] = useState(false);
 
   const [notifications, setNotifications] = useState({
     email: true,
@@ -25,6 +28,17 @@ export default function SettingsPage() {
     email: true,
     sms: false
   });
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setDarkMode(mq.matches);
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (darkMode) root.classList.add('dark');
+    else root.classList.remove('dark');
+  }, [darkMode]);
 
   const saveAll = () => {
     alert('Settings saved');
@@ -45,30 +59,30 @@ export default function SettingsPage() {
     setIntegrations(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const handlePasswordChange = async () => {
+    if (!profile.password.trim()) return;
+    try {
+      await updatePassword(auth.currentUser, profile.password);
+      alert('Password updated');
+      setProfile(prev => ({ ...prev, password: '' }));
+    } catch (e) {
+      alert('Failed to update password');
+    }
+  };
+
   return (
     <div className="antialiased bg-gray-50 text-gray-800 flex h-screen overflow-hidden">
       {/* Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 bg-white shadow-lg pt-20 flex-shrink-0">
         <nav className="flex-1 px-4 space-y-2">
-          {['Dashboard','Properties','Tenants','Announcements','Payments & Billing','Maintenance','Analytics','Settings'].map(label => (
-            <a
-              key={label}
-              href="#"
-              className={`flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 ${label === 'Settings' ? 'bg-purple-100 text-purple-700' : ''}`}
-            >
-              <span className="text-xl mr-3">
-                {label === 'Dashboard' ? '🏠'
-                  : label === 'Properties' ? '🏢'
-                  : label === 'Tenants' ? '👥'
-                  : label === 'Announcements' ? '🔔'
-                  : label === 'Payments & Billing' ? '💳'
-                  : label === 'Maintenance' ? '🛠️'
-                  : label === 'Analytics' ? '📊'
-                  : '⚙️'}
-              </span>
-              {label}
-            </a>
-          ))}
+          <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">🏠 Dashboard</a>
+          <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">🏢 Properties</a>
+          <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">👥 Tenants</a>
+          <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">🔔 Announcements</a>
+          <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">💳 Payments & Billing</a>
+          <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">🛠️ Maintenance</a>
+          <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100">📊 Analytics</a>
+          <a href="/settings" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700">⚙️ Settings</a>
         </nav>
         <div className="px-6 py-4 border-t">
           <div className="flex items-center space-x-3">
@@ -138,6 +152,24 @@ export default function SettingsPage() {
                       placeholder="••••••••"
                       className="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-purple-500 focus:ring-purple-500"
                     />
+                    <button
+                      type="button"
+                      onClick={handlePasswordChange}
+                      className="mt-2 px-3 py-1 bg-purple-600 text-white rounded"
+                    >
+                      Update Password
+                    </button>
+                  </div>
+                  <div className="flex items-center space-x-2 mt-4">
+                    <span className="text-sm text-gray-700">Dark Mode</span>
+                    <button
+                      type="button"
+                      onClick={() => setDarkMode(!darkMode)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full ${darkMode ? 'bg-purple-500' : 'bg-gray-300'}`}
+                    >
+                      <span className="sr-only">Toggle Dark Mode</span>
+                      <span className={`inline-block h-4 w-4 transform bg-white rounded-full transition ${darkMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
                   </div>
                 </div>
               </section>

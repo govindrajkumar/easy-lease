@@ -4,14 +4,14 @@ import { auth, db } from './firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 const navItems = [
-  { icon: '🏠', label: 'Dashboard', href: '#', active: true},
+  { icon: '🏠', label: 'Dashboard', href: '/landlord-dashboard', active: true },
   { icon: '🏢', label: 'Properties', href: '/properties' },
-  { icon: '👥', label: 'Tenants', href: '#' },
-  { icon: '🔔', label: 'Announcements', href: '#' },
-  { icon: '💳', label: 'Payments', href: '#' },
-  { icon: '🛠️', label: 'Maintenance', href: '#' },
+  { icon: '👥', label: 'Tenants', href: '/tenants' },
+  { icon: '🔔', label: 'Announcements', href: '/announcements' },
+  { icon: '💳', label: 'Payments', href: '/payments' },
+  { icon: '🛠️', label: 'Maintenance', href: '/maintenance' },
   { icon: '📊', label: 'Analytics', href: '/analytics' },
-  { icon: '⚙️', label: 'Settings', href: '#' },
+  { icon: '⚙️', label: 'Settings', href: '/settings' },
 ];
 
 export default function LandlordDashboard() {
@@ -133,13 +133,13 @@ export default function LandlordDashboard() {
           <nav className="px-4 space-y-2 mt-4">
             <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">🏠 Dashboard</a>
             <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
-            <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
+            <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
             <a href="/approve-requests" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">✅ Approve Requests</a>
-            <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
-            <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
-            <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
+            <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
+            <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
+            <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
             <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📊 Analytics</a>
-            <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">⚙️ Settings</a>
+            <a href="/settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">⚙️ Settings</a>
           </nav>
           <div className="px-6 py-4 border-t dark:border-gray-700">
             <div className="flex items-center space-x-3">
@@ -173,7 +173,7 @@ export default function LandlordDashboard() {
 
               {/* Maintenance Requests */}
               <a
-                href="#/maintenance"
+                href="/maintenance"
                 className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition"
               >
                 <div className="flex items-center justify-between">
@@ -192,7 +192,7 @@ export default function LandlordDashboard() {
 
               {/* Late Payments */}
               <a
-                href="#/late-payments"
+                href="/payments"
                 className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition"
               >
                 <div className="flex items-center justify-between">
@@ -232,7 +232,7 @@ export default function LandlordDashboard() {
                     <span className="font-medium">$1,600</span>
                   </li>
                 </ul>
-                <a href="#/payments" className="mt-4 inline-block text-purple-700 font-medium hover:underline dark:text-purple-300">
+                <a href="/payments" className="mt-4 inline-block text-purple-700 font-medium hover:underline dark:text-purple-300">
                   View all payments
                 </a>
               </section>
@@ -275,7 +275,7 @@ export default function LandlordDashboard() {
                     </div>
                   </li>
                 </ul>
-                <a href="#/maintenance" className="mt-4 inline-block text-purple-700 font-medium hover:underline dark:text-purple-300">
+                <a href="/maintenance" className="mt-4 inline-block text-purple-700 font-medium hover:underline dark:text-purple-300">
                   View all requests
                 </a>
               </section>

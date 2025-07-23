@@ -5,9 +5,14 @@ import LandlordDashboard from './LandlordDashboard';
 import TenantDashboard from './TenantDashboard';
 import PrivateRoute from './PrivateRoute';
 import PropertiesPage from './PropertiesPage';
-import LandingPage from './LandingPage'; 
+import TenantsPage from './TenantsPage';
+import AnnouncementsPage from './AnnouncementsPage';
+import PaymentsPage from './PaymentsPage';
+import MaintenancePage from './MaintenancePage';
+import LandingPage from './LandingPage';
 import SignIn from './Signin';
 import TenantRequestsApprovalPage from './TenantRequestsApprovalPage';
+import SettingsPage from './SettingsPage';
 
 function App() {
   return (
@@ -19,8 +24,13 @@ function App() {
         <Route element={<PrivateRoute />}>
           <Route path="/landlord-dashboard" element={<LandlordDashboard />} />
           <Route path="/properties" element={<PropertiesPage />} />
+          <Route path="/tenants" element={<TenantsPage />} />
+          <Route path="/announcements" element={<AnnouncementsPage />} />
+          <Route path="/payments" element={<PaymentsPage />} />
+          <Route path="/maintenance" element={<MaintenancePage />} />
           <Route path="/approve-requests" element={<TenantRequestsApprovalPage />} />
           <Route path="/tenant-dashboard" element={<TenantDashboard />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>
     </Router>
