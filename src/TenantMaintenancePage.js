@@ -10,6 +10,7 @@ import {
   query,
   where,
   getDocs,
+  onSnapshot,
 } from 'firebase/firestore';
 
 export default function TenantMaintenancePage() {
@@ -31,16 +32,21 @@ export default function TenantMaintenancePage() {
         if (!propSnap.empty) {
           const propDoc = propSnap.docs[0];
           setProperty({ id: propDoc.id, ...propDoc.data() });
-          const reqSnap = await getDocs(
-            query(collection(db, 'MaintenanceRequests'), where('tenant_uid', '==', u.uid))
-          );
-          const data = reqSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          setRequests(data);
         }
       }
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'MaintenanceRequests'), where('tenant_uid', '==', user.uid));
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setRequests(data);
+    });
+    return () => unsub();
+  }, [user]);
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -61,11 +67,6 @@ export default function TenantMaintenancePage() {
     });
     setForm({ title: '', details: '' });
     setFormOpen(false);
-    const reqSnap = await getDocs(
-      query(collection(db, 'MaintenanceRequests'), where('tenant_uid', '==', user.uid))
-    );
-    const data = reqSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    setRequests(data);
   };
 
   return (
@@ -92,7 +93,7 @@ export default function TenantMaintenancePage() {
             <a href="/tenant-payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments</a>
             <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">🛠️ Maintenance</a>
             <a href="/tenant-announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
-            <a href="/settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👤 Profile &amp; Settings</a>
+            <a href="/tenant-settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👤 Profile &amp; Settings</a>
           </nav>
           <div className="px-6 py-4 border-t dark:border-gray-700">
             <div className="flex items-center space-x-3">

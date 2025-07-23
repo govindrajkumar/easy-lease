@@ -17,6 +17,7 @@ import LandingPage from './LandingPage';
 import SignIn from './Signin';
 import TenantRequestsApprovalPage from './TenantRequestsApprovalPage';
 import SettingsPage from './SettingsPage';
+import TenantSettingsPage from './TenantSettingsPage';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
           <Route path="/tenant-maintenance" element={<TenantMaintenancePage />} />
           <Route path="/tenant-announcements" element={<TenantAnnouncementsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/tenant-settings" element={<TenantSettingsPage />} />
         </Route>
       </Routes>
     </Router>
