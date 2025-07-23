@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useTheme } from './ThemeContext';
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth, db } from "./firebase";
@@ -6,10 +7,10 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export default function SignUp() {
+  const { darkMode, toggleDarkMode } = useTheme();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
-  const [dark, setDark] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [form, setForm] = useState({
     role: 'landlord',
@@ -20,11 +21,6 @@ export default function SignUp() {
     phone: '',
   });
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (dark) root.classList.add('dark');
-    else root.classList.remove('dark');
-  }, [dark]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -95,11 +91,11 @@ export default function SignUp() {
             EasyLease
           </h1>
           <button
-            onClick={() => setDark(!dark)}
+            onClick={toggleDarkMode}
             aria-label="Toggle theme"
             className="p-2 rounded focus:outline-none"
           >
-            {dark ? (
+            {darkMode ? (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-300" fill="currentColor">
                 <path d="M10 2a8 8 0 017.446 4.908A6 6 0 1010 2z" />
               </svg>

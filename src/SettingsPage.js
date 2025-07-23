@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { auth } from './firebase';
 import { updatePassword } from 'firebase/auth';
+import { useTheme } from './ThemeContext';
 
 export default function SettingsPage() {
   const [tab, setTab] = useState('profile');
@@ -9,7 +10,7 @@ export default function SettingsPage() {
     email: 'john@example.com',
     password: ''
   });
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode, toggleDarkMode } = useTheme();
 
   const [notifications, setNotifications] = useState({
     email: true,
@@ -29,16 +30,6 @@ export default function SettingsPage() {
     sms: false
   });
 
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    setDarkMode(mq.matches);
-  }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (darkMode) root.classList.add('dark');
-    else root.classList.remove('dark');
-  }, [darkMode]);
 
   const saveAll = () => {
     alert('Settings saved');
@@ -164,7 +155,7 @@ export default function SettingsPage() {
                     <span className="text-sm text-gray-700">Dark Mode</span>
                     <button
                       type="button"
-                      onClick={() => setDarkMode(!darkMode)}
+                      onClick={toggleDarkMode}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full ${darkMode ? 'bg-purple-500' : 'bg-gray-300'}`}
                     >
                       <span className="sr-only">Toggle Dark Mode</span>
