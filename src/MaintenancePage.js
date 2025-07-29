@@ -13,7 +13,8 @@ import {
   deleteDoc,
   addDoc,
   serverTimestamp,
-  arrayUnion
+  arrayUnion,
+  Timestamp
 } from 'firebase/firestore';
 
 export default function MaintenancePage() {
@@ -78,17 +79,31 @@ export default function MaintenancePage() {
     const text = updateText.trim();
     if (!text || !activeReq) return;
     await updateDoc(doc(db, 'MaintenanceRequests', activeReq.id), {
-      updates: arrayUnion({ text, by: user.uid, name: firstName, created_at: serverTimestamp() }),
+      updates: arrayUnion({ text, by: user.uid, name: firstName, created_at: Timestamp.now() }),
     });
     setRequests((prev) =>
       prev.map((r) =>
         r.id === activeReq.id
-          ? { ...r, updates: [...(r.updates || []), { text, by: user.uid, name: firstName, created_at: { seconds: Date.now() / 1000 } }] }
+          ? {
+              ...r,
+              updates: [
+                ...(r.updates || []),
+                { text, by: user.uid, name: firstName, created_at: { seconds: Timestamp.now().seconds } },
+              ],
+            }
           : r
       )
     );
     setActiveReq((prev) =>
-      prev ? { ...prev, updates: [...(prev.updates || []), { text, by: user.uid, name: firstName, created_at: { seconds: Date.now() / 1000 } }] } : prev
+      prev
+        ? {
+            ...prev,
+            updates: [
+              ...(prev.updates || []),
+              { text, by: user.uid, name: firstName, created_at: { seconds: Timestamp.now().seconds } },
+            ],
+          }
+        : prev
     );
     setUpdateText('');
   };
