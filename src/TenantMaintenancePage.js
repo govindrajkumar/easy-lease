@@ -11,6 +11,8 @@ import {
   where,
   getDocs,
   onSnapshot,
+  updateDoc,
+  arrayUnion,
 } from 'firebase/firestore';
 
 export default function TenantMaintenancePage() {
@@ -18,6 +20,10 @@ export default function TenantMaintenancePage() {
   const [firstName, setFirstName] = useState('');
   const [user, setUser] = useState(null);
   const [property, setProperty] = useState(null);
+  const [properties, setProperties] = useState([]);
+  const [filterProp, setFilterProp] = useState('');
+  const [activeReq, setActiveReq] = useState(null);
+  const [updateText, setUpdateText] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({ title: '', details: '' });
   const navigate = useNavigate();
@@ -29,10 +35,9 @@ export default function TenantMaintenancePage() {
         const snap = await getDoc(doc(db, 'Users', u.uid));
         if (snap.exists()) setFirstName(snap.data().first_name || '');
         const propSnap = await getDocs(query(collection(db, 'Properties'), where('tenant_uid', '==', u.uid)));
-        if (!propSnap.empty) {
-          const propDoc = propSnap.docs[0];
-          setProperty({ id: propDoc.id, ...propDoc.data() });
-        }
+        const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setProperties(props);
+        if (props.length) setProperty(props[0]);
       }
     });
     return () => unsubscribe();
@@ -67,6 +72,15 @@ export default function TenantMaintenancePage() {
     });
     setForm({ title: '', details: '' });
     setFormOpen(false);
+  };
+
+  const addUpdate = async () => {
+    const text = updateText.trim();
+    if (!text || !activeReq) return;
+    await updateDoc(doc(db, 'MaintenanceRequests', activeReq.id), {
+      updates: arrayUnion({ text, by: user.uid, name: firstName, created_at: serverTimestamp() }),
+    });
+    setUpdateText('');
   };
 
   return (
@@ -114,8 +128,21 @@ export default function TenantMaintenancePage() {
             New Request
           </button>
 
-          {requests.map((r) => (
-            <div key={r.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-xl transition">
+          <select
+            value={filterProp}
+            onChange={(e) => setFilterProp(e.target.value)}
+            className="border rounded p-2 dark:bg-gray-900 dark:border-gray-700 mb-4"
+          >
+            <option value="">All Properties</option>
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+
+          {requests
+            .filter((r) => (filterProp ? r.property_id === filterProp : true))
+            .map((r) => (
+            <div key={r.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-xl transition cursor-pointer" onClick={() => setActiveReq(r)}>
               <h3 className="font-medium">{r.title}</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">Status: {r.status}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400">{r.created_at?.seconds ? new Date(r.created_at.seconds * 1000).toLocaleDateString() : ''}</p>
@@ -155,6 +182,29 @@ export default function TenantMaintenancePage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {activeReq && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setActiveReq(null)}>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-medium">{activeReq.title}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{activeReq.details}</p>
+            <p className="text-sm">Status: {activeReq.status}</p>
+            <div className="max-h-40 overflow-y-auto space-y-1 border-t pt-2">
+              {(activeReq.updates || []).map((u, i) => (
+                <div key={i} className="text-sm"><span className="font-medium">{u.name}:</span> {u.text}</div>
+              ))}
+            </div>
+            <input
+              type="text"
+              className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+              placeholder="Add update"
+              value={updateText}
+              onChange={(e) => setUpdateText(e.target.value)}
+            />
+            <button className="px-4 py-2 bg-purple-600 text-white rounded w-full" onClick={addUpdate}>Add Update</button>
+          </div>
         </div>
       )}
     </div>
