@@ -200,7 +200,7 @@ export default function TenantRequestsApprovalPage() {
               </option>
               {properties.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {p.address_line1 || p.name}
                 </option>
               ))}
             </select>
