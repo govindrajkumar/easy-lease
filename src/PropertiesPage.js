@@ -226,6 +226,7 @@ export default function PropertiesPage() {
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Address</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">City</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Province</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Tenants</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
                 </tr>
               </thead>
@@ -261,6 +262,12 @@ export default function PropertiesPage() {
                     >
                       {prop.province || <span className="italic text-gray-400 dark:text-gray-500">—</span>}
                     </td>
+                    <td
+                      className="px-6 py-4 text-sm dark:text-gray-100"
+                      onClick={() => openDetail(prop)}
+                    >
+                      {prop.tenants ? prop.tenants.length : prop.tenant_uid ? 1 : 0}
+                    </td>
                     <td className="px-6 py-4 text-sm dark:text-gray-100">
                       <button
                         className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
@@ -274,7 +281,7 @@ export default function PropertiesPage() {
                 ))}
                 {properties.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-400 dark:text-gray-500">
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400 dark:text-gray-500">
                       No properties found.
                     </td>
                   </tr>
@@ -389,8 +396,8 @@ export default function PropertiesPage() {
 
         {/* Property Detail Modal */}
         {showDetailModal && currentProp && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 overflow-auto">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-4xl relative">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md relative">
               <button
                 className="text-gray-500 dark:text-gray-300 absolute top-4 right-4 text-2xl"
                 onClick={() => setShowDetailModal(false)}
@@ -398,140 +405,24 @@ export default function PropertiesPage() {
                 &times;
               </button>
               <h2 className="text-2xl font-semibold mb-4 dark:text-gray-100">{currentProp.name}</h2>
-
-              {/* Tabs */}
-              <div className="border-b dark:border-gray-700 mb-6">
-                <nav className="-mb-px flex space-x-8">
-                  {['overview', 'tenants', 'payments', 'maintenance', 'documents'].map((tab) => (
-                    <button
-                      key={tab}
-                      className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                        currentTab === tab
-                          ? 'border-purple-500 text-purple-600 dark:text-purple-300 dark:border-purple-400'
-                          : 'border-transparent text-gray-500 dark:text-gray-400'
-                      }`}
-                      onClick={() => setCurrentTab(tab)}
-                    >
-                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                    </button>
-                  ))}
-                </nav>
-              </div>
-
-              {/* Tab Content */}
-              <div>
-                {currentTab === 'overview' && (
-                  <div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                      <div className="bg-gray-100 dark:bg-gray-900 rounded-xl p-4 text-center">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Units</p>
-                        <p className="text-2xl font-semibold dark:text-gray-100">{currentProp.units}</p>
-                      </div>
-                      <div className="bg-gray-100 dark:bg-gray-900 rounded-xl p-4 text-center">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Tenants</p>
-                        <p className="text-2xl font-semibold dark:text-gray-100">{currentProp.tenants.length}</p>
-                      </div>
-                      <div className="bg-gray-100 dark:bg-gray-900 rounded-xl p-4 text-center">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Rent Due</p>
-                        <p className="text-2xl font-semibold dark:text-gray-100">${currentProp.rentDue}</p>
-                      </div>
-                    </div>
-                    <p className="text-gray-700 dark:text-gray-200">
-                      Address: {[currentProp.address_line1, currentProp.address_line2, currentProp.city, currentProp.province, currentProp.zip_code]
-                        .filter(Boolean)
-                        .join(', ') || <span className="italic text-gray-400 dark:text-gray-500">No address</span>}
-                    </p>
-                  </div>
-                )}
-
-                {currentTab === 'tenants' && (
-                  <table className="min-w-full mb-4">
-                    <thead className="bg-gray-50 dark:bg-gray-900">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Name</th>
-                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Email</th>
-                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y dark:divide-gray-700">
-                      {currentProp.tenants.map((t, idx) => (
-                        <tr key={idx}>
-                          <td className="px-6 py-4 dark:text-gray-100">{t.name}</td>
-                          <td className="px-6 py-4 dark:text-gray-100">{t.email}</td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                t.status === 'Active'
-                                  ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400'
-                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-400'
-                              }`}
-                            >
-                              {t.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-
-                {currentTab === 'payments' && (
-                  <table className="min-w-full mb-4">
-                    <thead className="bg-gray-50 dark:bg-gray-900">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Date</th>
-                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Amount</th>
-                        <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y dark:divide-gray-700">
-                      {currentProp.payments.map((inv, idx) => (
-                        <tr key={idx}>
-                          <td className="px-6 py-4 dark:text-gray-100">{inv.date}</td>
-                          <td className="px-6 py-4 dark:text-gray-100">${inv.amount}</td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                inv.status === 'Paid'
-                                  ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400'
-                                  : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-400'
-                              }`}
-                            >
-                              {inv.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-
-                {currentTab === 'maintenance' && (
-                  <ul className="space-y-4">
-                    {currentProp.maintenance.map((req, idx) => (
-                      <li key={idx} className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium dark:text-gray-100">{req.issue}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{req.date} • {req.status}</p>
-                        </div>
-                        <button className="text-purple-600 hover:underline dark:text-purple-300">View Details</button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {currentTab === 'documents' && (
-                  <ul className="space-y-4">
-                    {currentProp.documents.map((doc, idx) => (
-                      <li key={idx} className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium dark:text-gray-100">{doc.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{doc.date}</p>
-                        </div>
-                        <a href={doc.url} className="text-purple-600 hover:underline dark:text-purple-300">Download</a>
-                      </li>
-                    ))}
-                  </ul>
+              <div className="space-y-4">
+                <p className="dark:text-gray-200">
+                  <strong>Address:</strong>{' '}
+                  {[currentProp.address_line1, currentProp.address_line2, currentProp.city, currentProp.province, currentProp.zip_code]
+                    .filter(Boolean)
+                    .join(', ') || <span className="italic text-gray-400 dark:text-gray-500">No address</span>}
+                </p>
+                <p className="dark:text-gray-200">
+                  <strong>Units:</strong> {currentProp.units || 0}
+                </p>
+                <p className="dark:text-gray-200">
+                  <strong>Tenants:</strong> {currentProp.tenants ? currentProp.tenants.length : currentProp.tenant_uid ? 1 : 0}
+                </p>
+                <p className="dark:text-gray-200">
+                  <strong>Total Rent Due:</strong> ${currentProp.total_rent_due || currentProp.rentDue || 0}
+                </p>
+                {currentProp.description && (
+                  <p className="dark:text-gray-200 whitespace-pre-line">{currentProp.description}</p>
                 )}
               </div>
             </div>
