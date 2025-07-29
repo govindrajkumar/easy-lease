@@ -13,6 +13,7 @@ import {
   onSnapshot,
   updateDoc,
   arrayUnion,
+  Timestamp,
 } from 'firebase/firestore';
 
 export default function TenantMaintenancePage() {
@@ -78,7 +79,7 @@ export default function TenantMaintenancePage() {
     const text = updateText.trim();
     if (!text || !activeReq) return;
     await updateDoc(doc(db, 'MaintenanceRequests', activeReq.id), {
-      updates: arrayUnion({ text, by: user.uid, name: firstName, created_at: serverTimestamp() }),
+      updates: arrayUnion({ text, by: user.uid, name: firstName, created_at: Timestamp.now() }),
     });
     setUpdateText('');
   };
