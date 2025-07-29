@@ -20,6 +20,8 @@ export default function TenantsPage() {
   const [firstName, setFirstName] = useState('');
   const [requests, setRequests] = useState([]);
   const [properties, setProperties] = useState([]);
+  const [filterProp, setFilterProp] = useState('');
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState('');
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -152,7 +154,20 @@ export default function TenantsPage() {
         <div className="w-full flex items-center justify-between px-2 md:px-4 lg:px-6 py-4 max-w-none">
           <h1 className="text-2xl font-bold cursor-pointer" onClick={() => navigate('/')}>EasyLease</h1>
           <div className="hidden md:flex items-center space-x-6">
-            {firstName && <span className="font-medium text-white dark:text-gray-100">{firstName}</span>}
+            <button
+              onClick={() => setShowRequestsModal(true)}
+              className="relative px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+            >
+              Requests
+              {requests.length > 0 && (
+                <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs rounded-full px-2">
+                  {requests.length}
+                </span>
+              )}
+            </button>
+            {firstName && (
+              <span className="font-medium text-white dark:text-gray-100">{firstName}</span>
+            )}
             <button
               className="px-6 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:scale-105 transform transition dark:from-gray-700 dark:to-gray-900"
               onClick={handleLogout}
@@ -188,11 +203,27 @@ export default function TenantsPage() {
 
         <div className="flex-1 p-6 overflow-y-auto">
           <h2 className="text-2xl font-bold mb-6">Your Tenants</h2>
+          <div className="mb-4">
+            <select
+              value={filterProp}
+              onChange={(e) => setFilterProp(e.target.value)}
+              className="border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+            >
+              <option value="">All Properties</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.name}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
           {tenants.length === 0 ? (
             <p className="text-gray-500 dark:text-gray-400">No tenants found.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {tenants.map((t) => (
+              {tenants
+                .filter((t) => (filterProp ? t.propertyName === filterProp : true))
+                .map((t) => (
                 <div key={t.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
                   <h3 className="text-lg font-medium dark:text-gray-100">{t.first_name} {t.last_name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{t.email}</p>
@@ -208,31 +239,45 @@ export default function TenantsPage() {
             </div>
           )}
 
-          <h2 className="text-2xl font-bold mt-12 mb-6">Pending Tenant Requests</h2>
-          {requests.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400">No pending requests at this time.</p>
-          ) : (
-            <ul className="space-y-4">
-              {requests.map((req) => (
-                <li key={req.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-medium">{req.tenant_name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Requested on: {req.created_at?.seconds ? new Date(req.created_at.seconds * 1000).toLocaleString() : 'N/A'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => openAssignModal(req)}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  >
-                    Approve
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </div>
+      {showRequestsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md space-y-4">
+            <h3 className="text-lg font-semibold dark:text-gray-100">Pending Tenant Requests</h3>
+            {requests.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400">No pending requests at this time.</p>
+            ) : (
+              <ul className="space-y-4">
+                {requests.map((req) => (
+                  <li key={req.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-medium">{req.tenant_name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Requested on: {req.created_at?.seconds ? new Date(req.created_at.seconds * 1000).toLocaleString() : 'N/A'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => openAssignModal(req)}
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                      Approve
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex justify-end">
+              <button
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 rounded"
+                onClick={() => setShowRequestsModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showAssignModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md">
