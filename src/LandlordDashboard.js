@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from './ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from './firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  query,
+  where,
+} from 'firebase/firestore';
 
 const navItems = [
   { icon: '🏠', label: 'Dashboard', href: '/landlord-dashboard', active: true },
@@ -19,6 +26,9 @@ export default function LandlordDashboard() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
+  const [totalRequests, setTotalRequests] = useState(0);
+  const [newRequests, setNewRequests] = useState(0);
+  const [monthlyExpense, setMonthlyExpense] = useState(0);
   const { darkMode } = useTheme();
   const navigate = useNavigate();
 
@@ -45,6 +55,42 @@ export default function LandlordDashboard() {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchData = async () => {
+      try {
+        const q = query(
+          collection(db, 'MaintenanceRequests'),
+          where('landlord_id', '==', user.uid)
+        );
+        const snap = await getDocs(q);
+        let open = 0;
+        let expense = 0;
+        const start = new Date();
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        snap.forEach((d) => {
+          const data = d.data();
+          if (data.status === 'Open') open += 1;
+          if (data.status === 'Resolved' && data.expense) {
+            const created = data.created_at?.seconds
+              ? new Date(data.created_at.seconds * 1000)
+              : null;
+            if (created && created >= start) {
+              expense += parseFloat(data.expense);
+            }
+          }
+        });
+        setTotalRequests(snap.size);
+        setNewRequests(open);
+        setMonthlyExpense(expense);
+      } catch (e) {
+        console.error('Failed to fetch maintenance data', e);
+      }
+    };
+    fetchData();
+  }, [user]);
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -107,10 +153,15 @@ export default function LandlordDashboard() {
                 href={item.href}
                 className={`flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ${
                   item.active ? 'bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200' : ''
-                }`}
+                } relative`}
               >
                 <span className="text-xl mr-3">{item.icon}</span>
                 {item.label}
+                {item.label === 'Maintenance' && newRequests > 0 && (
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
+                    {newRequests}
+                  </span>
+                )}
               </a>
             ))}
           </nav>
@@ -126,7 +177,14 @@ export default function LandlordDashboard() {
             <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
             <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
             <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
-            <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
+            <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative">
+              🛠️ Maintenance
+              {newRequests > 0 && (
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
+                  {newRequests}
+                </span>
+              )}
+            </a>
             <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📊 Analytics</a>
             <a href="/settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">⚙️ Settings</a>
           </nav>
@@ -143,7 +201,7 @@ export default function LandlordDashboard() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           <main className="flex-1 p-6 overflow-y-auto space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               {/* Total Rent Due */}
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                 <div className="flex items-center justify-between">
@@ -168,12 +226,13 @@ export default function LandlordDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-500 dark:text-gray-300">Maintenance Requests</p>
-                    <p className="text-2xl font-semibold dark:text-gray-100">7</p>
-                    <p className="text-sm text-red-500 mt-1 dark:text-red-400">+2 new requests</p>
+                    <p className="text-2xl font-semibold dark:text-gray-100">{totalRequests}</p>
+                    <p className="text-sm text-red-500 mt-1 dark:text-red-400">
+                      {newRequests > 0 ? `+${newRequests} new request${newRequests > 1 ? 's' : ''}` : 'No new requests'}
+                    </p>
                   </div>
                   <div className="text-purple-600 bg-purple-100 dark:bg-gray-700 p-3 rounded-full">🔧</div>
                 </div>
-                <p className="text-xs text-gray-400 mt-2 dark:text-gray-300">Urgent: 3 · In progress: 4</p>
                 <span className="mt-3 inline-block text-purple-700 font-medium hover:underline dark:text-purple-300">
                   View details
                 </span>
@@ -197,6 +256,17 @@ export default function LandlordDashboard() {
                   View details
                 </span>
               </a>
+
+              {/* Monthly Expenditure */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-300">Maintenance Expenses (Month)</p>
+                    <p className="text-2xl font-semibold dark:text-gray-100">${monthlyExpense.toFixed(2)}</p>
+                  </div>
+                  <div className="text-purple-600 bg-purple-100 dark:bg-gray-700 p-3 rounded-full">💸</div>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
