@@ -12,7 +12,8 @@ import {
   updateDoc,
   deleteDoc,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  arrayUnion
 } from 'firebase/firestore';
 
 export default function MaintenancePage() {
@@ -20,6 +21,12 @@ export default function MaintenancePage() {
   const [messageMap, setMessageMap] = useState({});
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
+  const [properties, setProperties] = useState([]);
+  const [filterProp, setFilterProp] = useState('');
+  const [tab, setTab] = useState('Open');
+  const [activeReq, setActiveReq] = useState(null);
+  const [updateText, setUpdateText] = useState('');
+  const [expense, setExpense] = useState('');
   const { darkMode } = useTheme();
   const navigate = useNavigate();
 
@@ -30,6 +37,10 @@ export default function MaintenancePage() {
       if (u) {
         const snap = await getDoc(doc(db, 'Users', u.uid));
         if (snap.exists()) setFirstName(snap.data().first_name || '');
+
+        const propSnap = await getDocs(query(collection(db, 'Properties'), where('landlord_id', '==', u.uid)));
+        const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setProperties(props);
 
         const reqSnap = await getDocs(query(collection(db, 'MaintenanceRequests'), where('landlord_id', '==', u.uid)));
         const data = await Promise.all(
@@ -56,9 +67,30 @@ export default function MaintenancePage() {
     navigate('/signin');
   };
 
-  const resolveRequest = async (id) => {
-    await updateDoc(doc(db, 'MaintenanceRequests', id), { status: 'Resolved' });
-    setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'Resolved' } : r)));
+  const updateStatus = async (id, status, exp) => {
+    const data = { status };
+    if (exp !== undefined) data.expense = exp;
+    await updateDoc(doc(db, 'MaintenanceRequests', id), data);
+    setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, ...data } : r)));
+  };
+
+  const addUpdate = async () => {
+    const text = updateText.trim();
+    if (!text || !activeReq) return;
+    await updateDoc(doc(db, 'MaintenanceRequests', activeReq.id), {
+      updates: arrayUnion({ text, by: user.uid, name: firstName, created_at: serverTimestamp() }),
+    });
+    setRequests((prev) =>
+      prev.map((r) =>
+        r.id === activeReq.id
+          ? { ...r, updates: [...(r.updates || []), { text, by: user.uid, name: firstName, created_at: { seconds: Date.now() / 1000 } }] }
+          : r
+      )
+    );
+    setActiveReq((prev) =>
+      prev ? { ...prev, updates: [...(prev.updates || []), { text, by: user.uid, name: firstName, created_at: { seconds: Date.now() / 1000 } }] } : prev
+    );
+    setUpdateText('');
   };
 
   const deleteRequest = async (id) => {
@@ -122,8 +154,34 @@ export default function MaintenancePage() {
         </aside>
 
         <div className="flex-1 p-6 overflow-y-auto space-y-4">
-          {requests.map((r) => (
-            <div key={r.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow space-y-2">
+          <div className="flex items-center space-x-4 mb-4">
+            <select
+              value={filterProp}
+              onChange={(e) => setFilterProp(e.target.value)}
+              className="border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+            >
+              <option value="">All Properties</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+            <div className="flex space-x-2">
+              {['Open', 'In Progress', 'Resolved'].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`px-3 py-1 rounded ${tab === t ? 'bg-purple-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          {requests
+            .filter((r) => (filterProp ? r.propertyName === filterProp : true))
+            .filter((r) => r.status === tab)
+            .map((r) => (
+            <div key={r.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow space-y-2 cursor-pointer" onClick={() => {setActiveReq(r); setExpense(r.expense || '');}}>
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-medium">{r.title}</h3>
@@ -131,8 +189,7 @@ export default function MaintenancePage() {
                   <p className="text-sm">Status: {r.status}</p>
                 </div>
                 <div className="space-x-2">
-                  <button className="px-2 py-1 bg-green-600 text-white rounded" onClick={() => resolveRequest(r.id)}>Resolve</button>
-                  <button className="px-2 py-1 bg-red-600 text-white rounded" onClick={() => deleteRequest(r.id)}>Delete</button>
+                  <button className="px-2 py-1 bg-red-600 text-white rounded" onClick={(e) => {e.stopPropagation(); deleteRequest(r.id);}}>Delete</button>
                 </div>
               </div>
               <div className="flex space-x-2">
@@ -154,6 +211,53 @@ export default function MaintenancePage() {
           )}
         </div>
       </div>
+
+      {activeReq && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setActiveReq(null)}>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-medium">{activeReq.title}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{activeReq.tenantName} – {activeReq.propertyName}</p>
+            <p>{activeReq.details}</p>
+            <p className="text-sm">Status: {activeReq.status}</p>
+            {activeReq.expense && <p className="text-sm">Expense: ${activeReq.expense}</p>}
+            <div className="max-h-40 overflow-y-auto space-y-1 border-t pt-2">
+              {(activeReq.updates || []).map((u, i) => (
+                <div key={i} className="text-sm">
+                  <span className="font-medium">{u.name}:</span> {u.text}
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <input
+                type="text"
+                className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+                placeholder="Add update"
+                value={updateText}
+                onChange={(e) => setUpdateText(e.target.value)}
+              />
+              <button className="px-4 py-2 bg-purple-600 text-white rounded w-full" onClick={addUpdate}>Add Update</button>
+              <select
+                value={activeReq.status}
+                onChange={(e) => { setActiveReq({ ...activeReq, status: e.target.value }); updateStatus(activeReq.id, e.target.value); }}
+                className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+              >
+                {['Open', 'In Progress', 'Resolved'].map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              {activeReq.status === 'Resolved' && (
+                <input
+                  type="number"
+                  className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+                  placeholder="Expense"
+                  value={expense}
+                  onChange={(e) => { setExpense(e.target.value); updateStatus(activeReq.id, 'Resolved', e.target.value); }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

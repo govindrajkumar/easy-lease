@@ -21,9 +21,11 @@ export default function AnnouncementsPage() {
   const [form, setForm] = useState({ target: 'all', propertyId: '', tenantUid: '', message: '' });
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
+  const [filterProp, setFilterProp] = useState('');
   const { darkMode } = useTheme();
   const navigate = useNavigate();
 
+  const tenantMap = tenants.reduce((acc, t) => ({ ...acc, [t.id]: t.name }), {});
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
@@ -178,8 +180,21 @@ export default function AnnouncementsPage() {
             </button>
           </form>
 
+          <select
+            value={filterProp}
+            onChange={(e) => setFilterProp(e.target.value)}
+            className="border rounded p-2 dark:bg-gray-900 dark:border-gray-700 mb-4"
+          >
+            <option value="">All Properties</option>
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+
           <div className="space-y-4">
-            {announcements.map((a) => (
+            {announcements
+              .filter((a) => (filterProp ? a.property_id === filterProp : true))
+              .map((a) => (
               <div key={a.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow flex justify-between items-start">
                 <div>
                   <p className="font-medium">{a.message}</p>
@@ -189,7 +204,7 @@ export default function AnnouncementsPage() {
                       ? 'All tenants'
                       : a.target === 'property'
                       ? `Property ${a.property_id}`
-                      : `Tenant ${a.tenant_uid}`}
+                      : `Tenant ${tenantMap[a.tenant_uid] || a.tenant_uid}`}
                   </p>
                 </div>
                 <button className="text-red-500" onClick={() => handleDelete(a.id)}>
