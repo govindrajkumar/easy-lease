@@ -29,6 +29,7 @@ export default function LandlordDashboard() {
   const [totalRequests, setTotalRequests] = useState(0);
   const [newRequests, setNewRequests] = useState(0);
   const [monthlyExpense, setMonthlyExpense] = useState(0);
+  const [pendingTenants, setPendingTenants] = useState(0);
   const { darkMode } = useTheme();
   const navigate = useNavigate();
 
@@ -90,6 +91,24 @@ export default function LandlordDashboard() {
       }
     };
     fetchData();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchTenants = async () => {
+      try {
+        const q = query(
+          collection(db, 'TenantRequests'),
+          where('landlord_email', '==', user.email),
+          where('status', '==', 'Pending')
+        );
+        const snap = await getDocs(q);
+        setPendingTenants(snap.size);
+      } catch (e) {
+        console.error('Failed to fetch tenant requests', e);
+      }
+    };
+    fetchTenants();
   }, [user]);
 
   const handleLogout = async () => {
@@ -162,6 +181,11 @@ export default function LandlordDashboard() {
                     {newRequests}
                   </span>
                 )}
+                {item.label === 'Tenants' && pendingTenants > 0 && (
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
+                    {pendingTenants}
+                  </span>
+                )}
               </a>
             ))}
           </nav>
@@ -174,7 +198,14 @@ export default function LandlordDashboard() {
           <nav className="px-4 space-y-2 mt-4">
             <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">🏠 Dashboard</a>
             <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
-            <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
+            <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative">
+              👥 Tenants
+              {pendingTenants > 0 && (
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
+                  {pendingTenants}
+                </span>
+              )}
+            </a>
             <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
             <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
             <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative">
