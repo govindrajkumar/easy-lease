@@ -11,7 +11,9 @@ import {
   updateDoc,
   deleteDoc,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 
 export default function TenantsPage() {
@@ -46,21 +48,17 @@ export default function TenantsPage() {
         );
         const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setProperties(props);
-        const tenantData = await Promise.all(
-          props
-            .filter((p) => p.tenant_uid)
-            .map(async (p) => {
-              const tSnap = await getDoc(doc(db, 'Users', p.tenant_uid));
-              if (tSnap.exists()) {
-                return {
-                  id: p.tenant_uid,
-                  propertyName: p.name,
-                  ...tSnap.data(),
-                };
-              }
-              return null;
-            })
-        );
+        const tenantData = [];
+        for (const p of props) {
+          const tList = p.tenants || (p.tenant_uid ? [p.tenant_uid] : []);
+          for (const tid of tList) {
+            const tSnap = await getDoc(doc(db, 'Users', tid));
+            if (tSnap.exists()) {
+              tenantData.push({ id: tid, propertyName: p.name, ...tSnap.data() });
+            }
+          }
+        }
+        
         setTenants(tenantData.filter(Boolean));
 
         const reqQuery = query(
@@ -96,10 +94,15 @@ export default function TenantsPage() {
     if (!window.confirm('Delete tenant?')) return;
     try {
       await deleteDoc(doc(db, 'Users', uid));
-      const propQuery = query(collection(db, 'Properties'), where('tenant_uid', '==', uid));
+      const propQuery = query(collection(db, 'Properties'), where('tenants', 'array-contains', uid));
       const snap = await getDocs(propQuery);
       await Promise.all(
-        snap.docs.map((d) => updateDoc(doc(db, 'Properties', d.id), { tenant_uid: '' }))
+        snap.docs.map((d) => updateDoc(doc(db, 'Properties', d.id), { tenants: arrayRemove(uid) }))
+      );
+      const oldQuery = query(collection(db, 'Properties'), where('tenant_uid', '==', uid));
+      const oldSnap = await getDocs(oldQuery);
+      await Promise.all(
+        oldSnap.docs.map((d) => updateDoc(doc(db, 'Properties', d.id), { tenant_uid: '' }))
       );
       setTenants((prev) => prev.filter((t) => t.id !== uid));
     } catch (e) {
@@ -118,7 +121,15 @@ export default function TenantsPage() {
     setAssignLoading(true);
     try {
       await updateDoc(doc(db, 'Users', selectedRequest.tenant_uid), { status: 'Active' });
-      await updateDoc(doc(db, 'Properties', selectedPropertyId), { tenant_uid: selectedRequest.tenant_uid });
+      const prop = properties.find((p) => p.id === selectedPropertyId);
+      if (prop && (prop.tenants || []).length >= 4) {
+        alert('This property already has the maximum number of tenants.');
+        setAssignLoading(false);
+        return;
+      }
+      await updateDoc(doc(db, 'Properties', selectedPropertyId), {
+        tenants: arrayUnion(selectedRequest.tenant_uid),
+      });
       await updateDoc(doc(db, 'TenantRequests', selectedRequest.id), { status: 'Approved' });
       setRequests((prev) => prev.filter((r) => r.id !== selectedRequest.id));
       setShowAssignModal(false);
@@ -139,6 +150,15 @@ export default function TenantsPage() {
         start_date: leaseDetails.startDate,
         end_date: leaseDetails.endDate,
         security_deposit: leaseDetails.deposit,
+        created_at: serverTimestamp(),
+      });
+      await addDoc(collection(db, 'RentPayments'), {
+        tenant_uid: selectedRequest.tenant_uid,
+        landlord_uid: user.uid,
+        property_id: selectedPropertyId,
+        amount: leaseDetails.rent,
+        due_date: leaseDetails.startDate,
+        paid: false,
         created_at: serverTimestamp(),
       });
       setShowLeaseModal(false);

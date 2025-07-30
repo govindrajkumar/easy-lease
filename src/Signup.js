@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, addDoc, collection } from "firebase/firestore";
 
 export default function SignUp() {
   const { darkMode, toggleDarkMode } = useTheme();
@@ -70,6 +70,18 @@ export default function SignUp() {
         created_at: serverTimestamp(),
         updated_at: serverTimestamp()
       });
+
+      if (form.role === 'tenant') {
+        await addDoc(collection(db, 'RentPayments'), {
+          tenant_uid: uid,
+          landlord_uid: '',
+          property_id: '',
+          amount: '1000',
+          due_date: new Date().toISOString().split('T')[0],
+          paid: false,
+          created_at: serverTimestamp(),
+        });
+      }
 
       setSuccess(true);
       setTimeout(() => {

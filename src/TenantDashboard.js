@@ -51,8 +51,12 @@ export default function TenantDashboard() {
       if (status !== 'Active') return;
       const user = auth.currentUser;
       if (!user) return;
-      const propQuery = query(collection(db, 'Properties'), where('tenant_uid', '==', user.uid));
-      const propSnap = await getDocs(propQuery);
+      let propSnap = await getDocs(
+        query(collection(db, 'Properties'), where('tenants', 'array-contains', user.uid))
+      );
+      if (propSnap.empty) {
+        propSnap = await getDocs(query(collection(db, 'Properties'), where('tenant_uid', '==', user.uid)));
+      }
       if (!propSnap.empty) {
         const propDoc = propSnap.docs[0];
         const propData = { id: propDoc.id, ...propDoc.data() };

@@ -38,18 +38,17 @@ export default function AnnouncementsPage() {
         const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setProperties(props);
 
-        const tenantData = await Promise.all(
-          props
-            .filter((p) => p.tenant_uid)
-            .map(async (p) => {
-              const tSnap = await getDoc(doc(db, 'Users', p.tenant_uid));
-              if (tSnap.exists()) {
-                return { id: p.tenant_uid, name: tSnap.data().first_name, propertyId: p.id };
-              }
-              return null;
-            })
-        );
-        setTenants(tenantData.filter(Boolean));
+        const tenantData = [];
+        for (const p of props) {
+          const tList = p.tenants || (p.tenant_uid ? [p.tenant_uid] : []);
+          for (const tid of tList) {
+            const tSnap = await getDoc(doc(db, 'Users', tid));
+            if (tSnap.exists()) {
+              tenantData.push({ id: tid, name: tSnap.data().first_name, propertyId: p.id });
+            }
+          }
+        }
+        setTenants(tenantData);
 
         const annSnap = await getDocs(query(collection(db, 'Announcements'), where('landlord_id', '==', u.uid)));
         setAnnouncements(annSnap.docs.map((d) => ({ id: d.id, ...d.data() })));

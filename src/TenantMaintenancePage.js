@@ -35,7 +35,10 @@ export default function TenantMaintenancePage() {
       if (u) {
         const snap = await getDoc(doc(db, 'Users', u.uid));
         if (snap.exists()) setFirstName(snap.data().first_name || '');
-        const propSnap = await getDocs(query(collection(db, 'Properties'), where('tenant_uid', '==', u.uid)));
+        let propSnap = await getDocs(query(collection(db, 'Properties'), where('tenants', 'array-contains', u.uid)));
+        if (propSnap.empty) {
+          propSnap = await getDocs(query(collection(db, 'Properties'), where('tenant_uid', '==', u.uid)));
+        }
         const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setProperties(props);
         if (props.length) setProperty(props[0]);
