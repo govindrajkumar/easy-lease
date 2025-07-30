@@ -2,13 +2,46 @@ import React, { useEffect, useState } from 'react';
 import { useTheme } from './ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from './firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  query,
+  where,
+  updateDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
 
 export default function PaymentsPage() {
   const [firstName, setFirstName] = useState('');
   const [user, setUser] = useState(null);
+  const [properties, setProperties] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [filterProp, setFilterProp] = useState('');
+  const [rentCollected, setRentCollected] = useState(0);
+  const [rentDue, setRentDue] = useState(0);
+  const [latePayments, setLatePayments] = useState(0);
   const { darkMode } = useTheme();
   const navigate = useNavigate();
+
+  const computeStats = (list) => {
+    let collected = 0;
+    let due = 0;
+    let late = 0;
+    const now = new Date();
+    list.forEach((p) => {
+      const amt = parseFloat(p.amount);
+      if (p.paid) collected += amt;
+      else {
+        due += amt;
+        if (new Date(p.due_date) < now) late += 1;
+      }
+    });
+    setRentCollected(collected);
+    setRentDue(due);
+    setLatePayments(late);
+  };
 
 
   useEffect(() => {
@@ -17,6 +50,31 @@ export default function PaymentsPage() {
       if (u) {
         const snap = await getDoc(doc(db, 'Users', u.uid));
         if (snap.exists()) setFirstName(snap.data().first_name || '');
+        const propSnap = await getDocs(
+          query(collection(db, 'Properties'), where('landlord_id', '==', u.uid))
+        );
+        const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setProperties(props);
+
+        const paySnap = await getDocs(
+          query(collection(db, 'RentPayments'), where('landlord_uid', '==', u.uid))
+        );
+        const data = await Promise.all(
+          paySnap.docs.map(async (d) => {
+            const p = d.data();
+            const prop = await getDoc(doc(db, 'Properties', p.property_id));
+            const tenant = await getDoc(doc(db, 'Users', p.tenant_uid));
+            return {
+              id: d.id,
+              propertyName: prop.exists() ? prop.data().name : '',
+              tenantName: tenant.exists() ? tenant.data().first_name : '',
+              ...p,
+            };
+          })
+        );
+        setPayments(data);
+
+        computeStats(data);
       }
     });
     return () => unsubscribe();
@@ -25,6 +83,18 @@ export default function PaymentsPage() {
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/signin');
+  };
+
+  const markPaid = async (id) => {
+    await updateDoc(doc(db, 'RentPayments', id), {
+      paid: true,
+      paid_at: serverTimestamp(),
+    });
+    setPayments((prev) => {
+      const updated = prev.map((p) => (p.id === id ? { ...p, paid: true } : p));
+      computeStats(updated);
+      return updated;
+    });
   };
 
   return (
@@ -67,9 +137,78 @@ export default function PaymentsPage() {
           </div>
         </aside>
 
-        <div className="flex-1 p-6 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow text-center">
-            <p className="text-gray-500 dark:text-gray-400">Payment features coming soon.</p>
+        <div className="flex-1 p-6 overflow-y-auto space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
+              <p className="text-gray-500">Rent Collected</p>
+              <p className="text-2xl font-semibold">${rentCollected}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
+              <p className="text-gray-500">Rent Due</p>
+              <p className="text-2xl font-semibold">${rentDue}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
+              <p className="text-gray-500">Late Payments</p>
+              <p className="text-2xl font-semibold">{latePayments}</p>
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-4">
+              <select
+                value={filterProp}
+                onChange={(e) => setFilterProp(e.target.value)}
+                className="border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+              >
+                <option value="">All Properties</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.name}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <table className="min-w-full bg-white dark:bg-gray-800 rounded">
+              <thead>
+                <tr className="text-left">
+                  <th className="p-2">Tenant</th>
+                  <th className="p-2">Property</th>
+                  <th className="p-2">Amount</th>
+                  <th className="p-2">Due Date</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments
+                  .filter((p) => (filterProp ? p.propertyName === filterProp : true))
+                  .map((p) => (
+                    <tr key={p.id} className="border-t">
+                      <td className="p-2">{p.tenantName}</td>
+                      <td className="p-2">{p.propertyName}</td>
+                      <td className="p-2">${p.amount}</td>
+                      <td className="p-2">{p.due_date}</td>
+                      <td className="p-2">{p.paid ? 'Paid' : 'Unpaid'}</td>
+                      <td className="p-2 space-x-2">
+                        {!p.paid && (
+                          <button
+                            className="px-2 py-1 bg-green-600 text-white rounded"
+                            onClick={() => markPaid(p.id)}
+                          >
+                            Mark as Paid
+                          </button>
+                        )}
+                        <button
+                          className="px-2 py-1 bg-gray-200 rounded"
+                          onClick={() => alert('Reminder sent')}
+                        >
+                          Reminder
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

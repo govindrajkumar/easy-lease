@@ -109,6 +109,16 @@ export default function TenantRequestsApprovalPage() {
         security_deposit: leaseDetails.deposit,
         created_at: serverTimestamp(),
       });
+      // create initial rent payment record
+      await addDoc(collection(db, 'RentPayments'), {
+        tenant_uid: selectedRequest.tenant_uid,
+        landlord_uid: user.uid,
+        property_id: selectedPropertyId,
+        amount: leaseDetails.rent,
+        due_date: leaseDetails.startDate,
+        paid: false,
+        created_at: serverTimestamp(),
+      });
       setShowLeaseModal(false);
     } catch (e) {
       console.error('Failed to save lease', e);
