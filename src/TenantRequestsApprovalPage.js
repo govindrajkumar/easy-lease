@@ -12,6 +12,7 @@ import {
   updateDoc,
   addDoc,
   serverTimestamp,
+  arrayUnion,
 } from 'firebase/firestore';
 
 export default function TenantRequestsApprovalPage() {
@@ -86,7 +87,15 @@ export default function TenantRequestsApprovalPage() {
     setAssignLoading(true);
     try {
       await updateDoc(doc(db, 'Users', selectedRequest.tenant_uid), { status: 'Active' });
-      await updateDoc(doc(db, 'Properties', selectedPropertyId), { tenant_uid: selectedRequest.tenant_uid });
+      const prop = properties.find((p) => p.id === selectedPropertyId);
+      if (prop && (prop.tenants || []).length >= 4) {
+        alert('This property already has the maximum number of tenants.');
+        setAssignLoading(false);
+        return;
+      }
+      await updateDoc(doc(db, 'Properties', selectedPropertyId), {
+        tenants: arrayUnion(selectedRequest.tenant_uid),
+      });
       await updateDoc(doc(db, 'TenantRequests', selectedRequest.id), { status: 'Approved' });
       setRequests((prev) => prev.filter((r) => r.id !== selectedRequest.id));
       setShowAssignModal(false);

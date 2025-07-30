@@ -26,7 +26,10 @@ export default function TenantAnnouncementsPage() {
       if (u) {
         const snap = await getDoc(doc(db, 'Users', u.uid));
         if (snap.exists()) setFirstName(snap.data().first_name || '');
-        const propSnap = await getDocs(query(collection(db, 'Properties'), where('tenant_uid', '==', u.uid)));
+        let propSnap = await getDocs(query(collection(db, 'Properties'), where('tenants', 'array-contains', u.uid)));
+        if (propSnap.empty) {
+          propSnap = await getDocs(query(collection(db, 'Properties'), where('tenant_uid', '==', u.uid)));
+        }
         if (!propSnap.empty) {
           const propDoc = propSnap.docs[0];
           const prop = { id: propDoc.id, ...propDoc.data() };

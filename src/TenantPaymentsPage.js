@@ -17,6 +17,8 @@ export default function TenantPaymentsPage() {
   const [history, setHistory] = useState([]);
   const [firstName, setFirstName] = useState('');
   const [user, setUser] = useState(null);
+  const [activePayment, setActivePayment] = useState(null);
+  const [ccInfo, setCcInfo] = useState({ number: '', expiry: '', cvc: '' });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -78,6 +80,8 @@ export default function TenantPaymentsPage() {
     });
     setPayments((prev) => prev.filter((x) => x.id !== p.id));
     setHistory((prev) => [...prev, { ...p, paid: true, paid_at: new Date() }]);
+    setActivePayment(null);
+    setCcInfo({ number: '', expiry: '', cvc: '' });
   };
 
   return (
@@ -118,8 +122,8 @@ export default function TenantPaymentsPage() {
         </aside>
 
         <div className="flex-1 p-6 overflow-y-auto space-y-8">
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Outstanding Invoices</h2>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow space-y-4">
+            <h2 className="text-lg font-semibold">Outstanding Invoices</h2>
             <div className="space-y-4">
               {payments.map((p) => (
                 <div key={p.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
@@ -132,7 +136,7 @@ export default function TenantPaymentsPage() {
                   </div>
                   <button
                     className="mt-3 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-                    onClick={() => handlePay(p)}
+                    onClick={() => setActivePayment(p)}
                   >
                     Pay Now
                   </button>
@@ -143,8 +147,8 @@ export default function TenantPaymentsPage() {
               )}
             </div>
           </div>
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Payment History</h2>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow space-y-4">
+            <h2 className="text-lg font-semibold">Payment History</h2>
             <div className="space-y-4">
               {history.map((p) => (
                 <div key={p.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
@@ -164,6 +168,50 @@ export default function TenantPaymentsPage() {
           </div>
         </div>
       </div>
+      {activePayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-sm space-y-4">
+            <h3 className="text-lg font-semibold dark:text-gray-100">
+              Pay ${activePayment.amount}
+            </h3>
+            <input
+              type="text"
+              placeholder="Card Number"
+              className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+              value={ccInfo.number}
+              onChange={(e) => setCcInfo({ ...ccInfo, number: e.target.value })}
+            />
+            <input
+              type="text"
+              placeholder="Expiry (MM/YY)"
+              className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+              value={ccInfo.expiry}
+              onChange={(e) => setCcInfo({ ...ccInfo, expiry: e.target.value })}
+            />
+            <input
+              type="text"
+              placeholder="CVC"
+              className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+              value={ccInfo.cvc}
+              onChange={(e) => setCcInfo({ ...ccInfo, cvc: e.target.value })}
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 rounded"
+                onClick={() => setActivePayment(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-purple-600 text-white rounded"
+                onClick={() => handlePay(activePayment)}
+              >
+                Pay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
