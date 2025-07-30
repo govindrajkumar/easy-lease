@@ -28,8 +28,10 @@ export default function LandlordDashboard() {
   const [firstName, setFirstName] = useState('');
   const [totalRequests, setTotalRequests] = useState(0);
   const [newRequests, setNewRequests] = useState(0);
-  const [monthlyExpense, setMonthlyExpense] = useState(0);
   const [pendingTenants, setPendingTenants] = useState(0);
+  const [rentCollected, setRentCollected] = useState(0);
+  const [rentDue, setRentDue] = useState(0);
+  const [latePayments, setLatePayments] = useState(0);
   const { darkMode } = useTheme();
   const navigate = useNavigate();
 
@@ -67,7 +69,6 @@ export default function LandlordDashboard() {
         );
         const snap = await getDocs(q);
         let open = 0;
-        let expense = 0;
         const start = new Date();
         start.setDate(1);
         start.setHours(0, 0, 0, 0);
@@ -79,13 +80,12 @@ export default function LandlordDashboard() {
               ? new Date(data.created_at.seconds * 1000)
               : null;
             if (created && created >= start) {
-              expense += parseFloat(data.expense);
+              /* Placeholder for expenses */
             }
           }
         });
         setTotalRequests(snap.size);
         setNewRequests(open);
-        setMonthlyExpense(expense);
       } catch (e) {
         console.error('Failed to fetch maintenance data', e);
       }
@@ -109,6 +109,36 @@ export default function LandlordDashboard() {
       }
     };
     fetchTenants();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchPayments = async () => {
+      try {
+        const snap = await getDocs(
+          query(collection(db, 'RentPayments'), where('landlord_uid', '==', user.uid))
+        );
+        const data = snap.docs.map((d) => d.data());
+        let collected = 0;
+        let due = 0;
+        let late = 0;
+        const now = new Date();
+        data.forEach((p) => {
+          const amt = parseFloat(p.amount);
+          if (p.paid) collected += amt;
+          else {
+            due += amt;
+            if (new Date(p.due_date) < now) late += 1;
+          }
+        });
+        setRentCollected(collected);
+        setRentDue(due);
+        setLatePayments(late);
+      } catch (e) {
+        console.error('Failed to fetch payments', e);
+      }
+    };
+    fetchPayments();
   }, [user]);
 
   const handleLogout = async () => {
@@ -232,42 +262,31 @@ export default function LandlordDashboard() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           <main className="flex-1 p-6 overflow-y-auto space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Rent Collected */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-300">Rent Collected</p>
+                    <p className="text-2xl font-semibold dark:text-gray-100">${rentCollected.toFixed(2)}</p>
+                  </div>
+                  <div className="text-purple-600 bg-purple-100 dark:bg-gray-700 p-3 rounded-full">💰</div>
+                </div>
+                <p className="text-xs text-gray-400 mt-2 dark:text-gray-300">Payments received.</p>
+              </div>
+
               {/* Total Rent Due */}
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-500 dark:text-gray-300">Total Rent Due</p>
-                    <p className="text-2xl font-semibold dark:text-gray-100">$12,450</p>
-                    <p className="text-sm text-green-500 mt-1 dark:text-green-400">+$1,200 from last month</p>
+                    <p className="text-2xl font-semibold dark:text-gray-100">${rentDue.toFixed(2)}</p>
                   </div>
-                  <div className="text-purple-600 bg-purple-100 dark:bg-gray-700 p-3 rounded-full">💰</div>
+                  <div className="text-purple-600 bg-purple-100 dark:bg-gray-700 p-3 rounded-full">📄</div>
                 </div>
-                <p className="text-xs text-gray-400 mt-2 dark:text-gray-300">Due within 7 days: $8,200</p>
-                <a href="#" className="mt-3 inline-block text-purple-700 font-medium hover:underline dark:text-purple-300">
-                  View details
-                </a>
+                <p className="text-xs text-gray-400 mt-2 dark:text-gray-300">Overall outstanding rent.</p>
               </div>
 
-              {/* Maintenance Requests */}
-              <a
-                href="/maintenance"
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-300">Maintenance Requests</p>
-                    <p className="text-2xl font-semibold dark:text-gray-100">{totalRequests}</p>
-                    <p className="text-sm text-red-500 mt-1 dark:text-red-400">
-                      {newRequests > 0 ? `+${newRequests} new request${newRequests > 1 ? 's' : ''}` : 'No new requests'}
-                    </p>
-                  </div>
-                  <div className="text-purple-600 bg-purple-100 dark:bg-gray-700 p-3 rounded-full">🔧</div>
-                </div>
-                <span className="mt-3 inline-block text-purple-700 font-medium hover:underline dark:text-purple-300">
-                  View details
-                </span>
-              </a>
 
               {/* Late Payments */}
               <a
@@ -277,27 +296,16 @@ export default function LandlordDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-500 dark:text-gray-300">Late Payments</p>
-                    <p className="text-2xl font-semibold dark:text-gray-100">2</p>
-                    <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">$2,400 outstanding</p>
+                    <p className="text-2xl font-semibold dark:text-gray-100">{latePayments}</p>
                   </div>
                   <div className="text-purple-600 bg-purple-100 dark:bg-gray-700 p-3 rounded-full">⏰</div>
                 </div>
-                <p className="text-xs text-gray-400 mt-2 dark:text-gray-300">Avg. days late: 5</p>
+                <p className="text-xs text-gray-400 mt-2 dark:text-gray-300">Payments past due date.</p>
                 <span className="mt-3 inline-block text-purple-700 font-medium hover:underline dark:text-purple-300">
                   View details
                 </span>
               </a>
 
-              {/* Monthly Expenditure */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-300">Maintenance Expenses (Month)</p>
-                    <p className="text-2xl font-semibold dark:text-gray-100">${monthlyExpense.toFixed(2)}</p>
-                  </div>
-                  <div className="text-purple-600 bg-purple-100 dark:bg-gray-700 p-3 rounded-full">💸</div>
-                </div>
-              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

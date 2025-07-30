@@ -8,10 +8,13 @@ import {
   getDocs,
   doc,
   getDoc,
+  updateDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
 
 export default function TenantPaymentsPage() {
   const [payments, setPayments] = useState([]);
+  const [history, setHistory] = useState([]);
   const [firstName, setFirstName] = useState('');
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
@@ -22,13 +25,13 @@ export default function TenantPaymentsPage() {
       if (u) {
         const snap = await getDoc(doc(db, 'Users', u.uid));
         if (snap.exists()) setFirstName(snap.data().first_name || '');
-        const payQuery = query(
+        const unpaidQuery = query(
           collection(db, 'RentPayments'),
           where('tenant_uid', '==', u.uid),
           where('paid', '==', false)
         );
-        const paySnap = await getDocs(payQuery);
-        const data = await Promise.all(
+        const paySnap = await getDocs(unpaidQuery);
+        const unpaid = await Promise.all(
           paySnap.docs.map(async (d) => {
             const p = d.data();
             const propSnap = await getDoc(doc(db, 'Properties', p.property_id));
@@ -39,7 +42,25 @@ export default function TenantPaymentsPage() {
             };
           })
         );
-        setPayments(data);
+        const paidQuery = query(
+          collection(db, 'RentPayments'),
+          where('tenant_uid', '==', u.uid),
+          where('paid', '==', true)
+        );
+        const paidSnap = await getDocs(paidQuery);
+        const paid = await Promise.all(
+          paidSnap.docs.map(async (d) => {
+            const p = d.data();
+            const propSnap = await getDoc(doc(db, 'Properties', p.property_id));
+            return {
+              id: d.id,
+              propertyName: propSnap.exists() ? propSnap.data().name : '',
+              ...p,
+            };
+          })
+        );
+        setPayments(unpaid);
+        setHistory(paid);
       }
     });
     return () => unsubscribe();
@@ -48,6 +69,15 @@ export default function TenantPaymentsPage() {
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/signin');
+  };
+
+  const handlePay = async (p) => {
+    await updateDoc(doc(db, 'RentPayments', p.id), {
+      paid: true,
+      paid_at: serverTimestamp(),
+    });
+    setPayments((prev) => prev.filter((x) => x.id !== p.id));
+    setHistory((prev) => [...prev, { ...p, paid: true, paid_at: new Date() }]);
   };
 
   return (
@@ -87,22 +117,51 @@ export default function TenantPaymentsPage() {
           </div>
         </aside>
 
-        <div className="flex-1 p-6 overflow-y-auto space-y-4">
-          {payments.map((p) => (
-            <div key={p.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-xl transition">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">{p.propertyName}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Due {p.due_date}</p>
+        <div className="flex-1 p-6 overflow-y-auto space-y-8">
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Outstanding Invoices</h2>
+            <div className="space-y-4">
+              {payments.map((p) => (
+                <div key={p.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">{p.propertyName}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Due {p.due_date}</p>
+                    </div>
+                    <span className="font-semibold">${p.amount}</span>
+                  </div>
+                  <button
+                    className="mt-3 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                    onClick={() => handlePay(p)}
+                  >
+                    Pay Now
+                  </button>
                 </div>
-                <span className="font-semibold">${p.amount}</span>
-              </div>
-              <button className="mt-3 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Pay Now</button>
+              ))}
+              {payments.length === 0 && (
+                <p className="text-gray-500 dark:text-gray-400 text-center">No outstanding payments.</p>
+              )}
             </div>
-          ))}
-          {payments.length === 0 && (
-            <p className="text-gray-500 dark:text-gray-400 text-center">No outstanding payments.</p>
-          )}
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Payment History</h2>
+            <div className="space-y-4">
+              {history.map((p) => (
+                <div key={p.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">{p.propertyName}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Paid {p.due_date}</p>
+                    </div>
+                    <span className="font-semibold">${p.amount}</span>
+                  </div>
+                </div>
+              ))}
+              {history.length === 0 && (
+                <p className="text-gray-500 dark:text-gray-400 text-center">No payments yet.</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
