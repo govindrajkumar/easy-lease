@@ -1,10 +1,11 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const fetch = require('node-fetch');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
-// Firebase client SDK (used on the server to verify credentials)
+// Firebase client SDK (used on the server for Firestore access)
 const { initializeApp } = require('firebase/app');
-const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
 const { getFirestore, doc, getDoc } = require('firebase/firestore');
 
 const app = express();
@@ -26,7 +27,6 @@ const firebaseConfig = {
 
 // Initialize Firebase for server-side usage
 const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 
 function verifyToken(req, res, next) {
@@ -50,9 +50,23 @@ app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Verify email/password with Firebase Auth
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    const uid = cred.user.uid;
+    // Verify email/password with Firebase Auth REST API
+    const authRes = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseConfig.apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, returnSecureToken: true }),
+        agent: process.env.https_proxy ? new HttpsProxyAgent(process.env.https_proxy) : undefined,
+      }
+    );
+
+    if (!authRes.ok) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const authData = await authRes.json();
+    const uid = authData.localId;
 
     // Fetch additional user info from Firestore
     const docRef = doc(db, 'Users', uid);
@@ -82,7 +96,7 @@ app.post('/login', async (req, res) => {
     res.json({ token });
   } catch (err) {
     console.error('Login error:', err.message);
-    res.status(401).json({ message: 'Invalid credentials' });
+    res.status(500).json({ message: 'Login failed' });
   }
 });
 
