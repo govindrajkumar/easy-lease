@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "../firebase"; // adjust path if needed
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { useAuth } from '../context/AuthContext';
 
 export default function SignIn() {
   const { darkMode, toggleDarkMode } = useTheme();
@@ -11,6 +9,7 @@ export default function SignIn() {
   const [showPass, setShowPass] = useState(false);
   const [form, setForm] = useState({ email: '', password: '', remember: false });
   const navigate = useNavigate();
+  const { login } = useAuth();
 
 
   const handleChange = (e) => {
@@ -22,37 +21,35 @@ export default function SignIn() {
   };
 
   const handleSubmit = async (e) => {
-      e.preventDefault();
-      setError(null);
-  
-      try {
-        // 1) Authenticate with Firebase Auth
-        const { user } = await signInWithEmailAndPassword(
-          auth,
-          form.email,
-          form.password
-        );
-  
-        // 2) Fetch user document from Firestore
-        const snap = await getDoc(doc(db, "Users", user.uid));
-        if (!snap.exists()) throw new Error("Profile not found.");
-  
-        const { role, first_name } = snap.data();
-  
-        // 3) Store session variables
-        sessionStorage.setItem("user_email", form.email);
-        sessionStorage.setItem("user_first_name", first_name);
-  
-        // 4) Redirect based on role
-        if (role === "landlord") {
-          navigate("/landlord-dashboard");
-        } else {
-          navigate("/tenant-dashboard");
-        }
-      } catch (e) {
-        setError(e.message);
+    e.preventDefault();
+    setError(null);
+
+    try {
+      const res = await fetch('http://localhost:5000/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, password: form.password })
+      });
+
+      if (!res.ok) throw new Error('Invalid credentials');
+      const { token } = await res.json();
+
+      // store JWT and user details
+      login(token);
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      sessionStorage.setItem('user_email', payload.email);
+      if (payload.first_name) sessionStorage.setItem('user_first_name', payload.first_name);
+
+      // redirect based on role
+      if (payload.role === 'landlord') {
+        navigate('/landlord-dashboard');
+      } else {
+        navigate('/tenant-dashboard');
       }
-    };
+    } catch (e) {
+      setError(e.message);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">

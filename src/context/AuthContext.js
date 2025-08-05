@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
 
 const AuthContext = createContext();
 
@@ -9,18 +7,37 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoading(false);
-    });
-    return unsubscribe;
+    const stored = sessionStorage.getItem('token');
+    if (stored) setToken(stored);
+    setLoading(false);
   }, []);
 
-  const value = { currentUser };
+  const login = (jwt) => {
+    sessionStorage.setItem('token', jwt);
+    setToken(jwt);
+  };
+
+  const logout = () => {
+    sessionStorage.removeItem('token');
+    setToken(null);
+  };
+
+  const refreshToken = (jwt) => {
+    sessionStorage.setItem('token', jwt);
+    setToken(jwt);
+  };
+
+  const authFetch = (url, options = {}) => {
+    const headers = options.headers ? { ...options.headers } : {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(url, { ...options, headers });
+  };
+
+  const value = { token, login, logout, refreshToken, authFetch };
 
   return (
     <AuthContext.Provider value={value}>
