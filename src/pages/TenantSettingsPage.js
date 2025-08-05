@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from './firebase';
+import { auth, db } from '../firebase';
 import { updatePassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { useTheme } from './ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function TenantSettingsPage() {
   const [tab, setTab] = useState('profile');

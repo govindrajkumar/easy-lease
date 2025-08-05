@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useTheme } from './ThemeContext';
-import './index.css'; // Assuming you'll move the CSS here or use Tailwind CSS directly
+import { useTheme } from '../context/ThemeContext';
+import '../index.css'; // Assuming you'll move the CSS here or use Tailwind CSS directly
 
 function AuthPage() {
   const { darkMode, toggleDarkMode } = useTheme();

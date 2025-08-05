@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { useTheme } from './ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { auth, db } from "./firebase";
+import { auth, db } from "../firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp, addDoc, collection } from "firebase/firestore";
 

@@ -1,23 +1,24 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { ThemeProvider } from './ThemeContext';
-import Signup from './Signup';
-import LandlordDashboard from './LandlordDashboard';
-import TenantDashboard from './TenantDashboard';
-import PrivateRoute from './PrivateRoute';
-import PropertiesPage from './PropertiesPage';
-import TenantsPage from './TenantsPage';
-import AnnouncementsPage from './AnnouncementsPage';
-import PaymentsPage from './PaymentsPage';
-import MaintenancePage from './MaintenancePage';
-import TenantPaymentsPage from './TenantPaymentsPage';
-import TenantMaintenancePage from './TenantMaintenancePage';
-import TenantAnnouncementsPage from './TenantAnnouncementsPage';
-import LandingPage from './LandingPage';
-import SignIn from './Signin';
-import TenantRequestsApprovalPage from './TenantRequestsApprovalPage';
-import SettingsPage from './SettingsPage';
-import TenantSettingsPage from './TenantSettingsPage';
+import { ThemeProvider } from './context/ThemeContext';
+import Signup from './pages/Signup';
+import LandlordDashboard from './pages/LandlordDashboard';
+import TenantDashboard from './pages/TenantDashboard';
+import PrivateRoute from './components/PrivateRoute';
+import PropertiesPage from './pages/PropertiesPage';
+import TenantsPage from './pages/TenantsPage';
+import AnnouncementsPage from './pages/AnnouncementsPage';
+import PaymentsPage from './pages/PaymentsPage';
+import MaintenancePage from './pages/MaintenancePage';
+import TenantPaymentsPage from './pages/TenantPaymentsPage';
+import TenantMaintenancePage from './pages/TenantMaintenancePage';
+import TenantAnnouncementsPage from './pages/TenantAnnouncementsPage';
+import LandingPage from './pages/LandingPage';
+import SignIn from './pages/Signin';
+import TenantRequestsApprovalPage from './pages/TenantRequestsApprovalPage';
+import SettingsPage from './pages/SettingsPage';
+import TenantSettingsPage from './pages/TenantSettingsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           <Route path="/payments" element={<PaymentsPage />} />
           <Route path="/maintenance" element={<MaintenancePage />} />
           <Route path="/approve-requests" element={<TenantRequestsApprovalPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/tenant-dashboard" element={<TenantDashboard />} />
           <Route path="/tenant-payments" element={<TenantPaymentsPage />} />
           <Route path="/tenant-maintenance" element={<TenantMaintenancePage />} />
