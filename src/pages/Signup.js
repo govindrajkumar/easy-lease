@@ -71,18 +71,6 @@ export default function SignUp() {
         updated_at: serverTimestamp()
       });
 
-      if (form.role === 'tenant') {
-        await addDoc(collection(db, 'RentPayments'), {
-          tenant_uid: uid,
-          landlord_uid: '',
-          property_id: '',
-          amount: '1000',
-          due_date: new Date().toISOString().split('T')[0],
-          paid: false,
-          created_at: serverTimestamp(),
-        });
-      }
-
       setSuccess(true);
       setTimeout(() => {
         navigate("/signin");

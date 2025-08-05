@@ -34,15 +34,16 @@ export default function TenantPaymentsPage() {
         );
         const paySnap = await getDocs(unpaidQuery);
         const unpaid = await Promise.all(
-          paySnap.docs.map(async (d) => {
-            const p = d.data();
-            const propSnap = await getDoc(doc(db, 'Properties', p.property_id));
-            return {
-              id: d.id,
-              propertyName: propSnap.exists() ? propSnap.data().name : '',
-              ...p,
-            };
-          })
+          paySnap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((p) => p.property_id)
+            .map(async (p) => {
+              const propSnap = await getDoc(doc(db, 'Properties', p.property_id));
+              return {
+                ...p,
+                propertyName: propSnap.exists() ? propSnap.data().name : '',
+              };
+            })
         );
         const paidQuery = query(
           collection(db, 'RentPayments'),
@@ -51,15 +52,16 @@ export default function TenantPaymentsPage() {
         );
         const paidSnap = await getDocs(paidQuery);
         const paid = await Promise.all(
-          paidSnap.docs.map(async (d) => {
-            const p = d.data();
-            const propSnap = await getDoc(doc(db, 'Properties', p.property_id));
-            return {
-              id: d.id,
-              propertyName: propSnap.exists() ? propSnap.data().name : '',
-              ...p,
-            };
-          })
+          paidSnap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((p) => p.property_id)
+            .map(async (p) => {
+              const propSnap = await getDoc(doc(db, 'Properties', p.property_id));
+              return {
+                ...p,
+                propertyName: propSnap.exists() ? propSnap.data().name : '',
+              };
+            })
         );
         setPayments(unpaid);
         setHistory(paid);
