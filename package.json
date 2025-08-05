@@ -11,6 +11,9 @@
     "easy-lease": "file:",
     "firebase": "^11.9.1",
     "framer-motion": "^12.19.2",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
     "react": "^19.1.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",
@@ -23,7 +26,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "server": "node server/index.js"
   },
   "eslintConfig": {
     "extends": [
