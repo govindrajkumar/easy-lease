@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -26,6 +26,8 @@ ChartJS.register(
 export default function AnalyticsPage() {
   const { darkMode } = useTheme();
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [firstName, setFirstName] = useState('');
   const [metrics, setMetrics] = useState({
     properties: 0,
     occupied: 0,
@@ -34,13 +36,21 @@ export default function AnalyticsPage() {
     rentRate: 0,
   });
   const [chartData, setChartData] = useState(null);
+  const handleLogout = async () => {
+    await auth.signOut();
+    navigate('/signin');
+  };
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(async (user) => {
-      if (!user) return;
+    const unsub = auth.onAuthStateChanged(async (u) => {
+      setUser(u);
+      if (!u) return;
+      const snap = await getDoc(doc(db, 'Users', u.uid));
+      if (snap.exists()) setFirstName(snap.data().first_name || '');
+
       // properties and tenants
       const propSnap = await getDocs(
-        query(collection(db, 'Properties'), where('landlord_id', '==', user.uid))
+        query(collection(db, 'Properties'), where('landlord_id', '==', u.uid))
       );
       let occupied = 0;
       const tenantSet = new Set();
@@ -57,7 +67,7 @@ export default function AnalyticsPage() {
       const reqSnap = await getDocs(
         query(
           collection(db, 'MaintenanceRequests'),
-          where('landlord_id', '==', user.uid),
+          where('landlord_id', '==', u.uid),
           where('status', '==', 'Open')
         )
       );
@@ -65,7 +75,7 @@ export default function AnalyticsPage() {
 
       // rent payments
       const paySnap = await getDocs(
-        query(collection(db, 'RentPayments'), where('landlord_uid', '==', user.uid))
+        query(collection(db, 'RentPayments'), where('landlord_uid', '==', u.uid))
       );
       let collected = 0;
       let due = 0;
@@ -125,33 +135,64 @@ export default function AnalyticsPage() {
   }, []);
 
   return (
-    <div className={`min-h-screen p-6 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100`}>
-      <header className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Analytics</h1>
-        <button
-          onClick={() => navigate('/landlord-dashboard')}
-          className="px-4 py-2 bg-purple-600 text-white rounded"
-        >
-          Back
-        </button>
+    <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
+      <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800">
+        <div className="w-full flex items-center justify-between px-2 md:px-4 lg:px-6 py-4 max-w-none">
+          <h1 className="text-2xl font-bold cursor-pointer" onClick={() => navigate('/')}>EasyLease</h1>
+          <div className="hidden md:flex items-center space-x-6">
+            {firstName && (
+              <span className="font-medium text-white dark:text-gray-100">{firstName}</span>
+            )}
+            <button
+              className="px-6 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:scale-105 transform transition dark:from-gray-700 dark:to-gray-900"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+          </div>
+        </div>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <MetricCard title="Properties" value={metrics.properties} />
-        <MetricCard title="Occupied Units" value={metrics.occupied} />
-        <MetricCard title="Active Tenants" value={metrics.tenants} />
-        <MetricCard title="Pending Requests" value={metrics.pendingRequests} />
-        <MetricCard
-          title="Rent Collection Rate"
-          value={`${metrics.rentRate}%`}
-        />
-      </div>
+      <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
+        <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-[calc(100vh-5rem)] justify-between">
+          <nav className="px-4 space-y-2 mt-4">
+            <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏠 Dashboard</a>
+            <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
+            <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
+            <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
+            <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
+            <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
+            <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">📊 Analytics</a>
+            <a href="/settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">⚙️ Settings</a>
+          </nav>
+          <div className="px-6 py-4 border-t dark:border-gray-700">
+            <div className="flex items-center space-x-3">
+              <span className="text-xl">👤</span>
+              <div>
+                <div className="font-medium dark:text-gray-100">{firstName || 'User'}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{user?.email || ''}</div>
+              </div>
+            </div>
+          </div>
+        </aside>
 
-      {chartData && (
-        <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
-          <Line data={chartData} />
+        <div className="flex-1 p-6 overflow-y-auto">
+          <h2 className="text-2xl font-bold mb-8">Analytics</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <MetricCard title="Properties" value={metrics.properties} />
+            <MetricCard title="Occupied Units" value={metrics.occupied} />
+            <MetricCard title="Active Tenants" value={metrics.tenants} />
+            <MetricCard title="Pending Requests" value={metrics.pendingRequests} />
+            <MetricCard title="Rent Collection Rate" value={`${metrics.rentRate}%`} />
+          </div>
+
+          {chartData && (
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
+              <Line data={chartData} />
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
