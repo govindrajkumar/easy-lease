@@ -8,10 +8,10 @@ const SECRET_KEY = process.env.JWT_SECRET || 'secret123';
 app.use(cors());
 app.use(express.json());
 
-const users = [
-  { id: 1, email: 'tenant@example.com', password: 'tenantpass', role: 'tenant', first_name: 'Tenant' },
-  { id: 2, email: 'landlord@example.com', password: 'landlordpass', role: 'landlord', first_name: 'Landlord' }
-];
+const firebaseConfig = {
+  apiKey: "AIzaSyDH-9HMnMIMnpP7JT3HwODG1cZRrFTr-Ko",
+  projectId: "easylease-sgaap",
+};
 
 function verifyToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -25,13 +25,48 @@ function verifyToken(req, res, next) {
   });
 }
 
-app.post('/login', (req, res) => {
-  const { email, password } = req.body;
-  const user = users.find(u => u.email === email && u.password === password);
-  if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+async function signInWithPassword(email, password) {
+  const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseConfig.apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, returnSecureToken: true }),
+  });
+  if (!res.ok) {
+    throw new Error('Auth failed');
+  }
+  return res.json();
+}
 
-  const token = jwt.sign({ email: user.email, role: user.role, first_name: user.first_name }, SECRET_KEY, { expiresIn: '1h' });
-  res.json({ token });
+async function fetchUser(uid, idToken) {
+  const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/Users/${uid}`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  if (!res.ok) {
+    throw new Error('User profile not found');
+  }
+  return res.json();
+}
+
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const loginData = await signInWithPassword(email, password);
+    const { localId: uid, idToken } = loginData;
+    const userDoc = await fetchUser(uid, idToken);
+    const fields = userDoc.fields || {};
+    const role = fields.role?.stringValue || '';
+    const firstName = fields.first_name?.stringValue || '';
+
+    const token = jwt.sign({ email, role, first_name: firstName }, SECRET_KEY, {
+      expiresIn: '1h',
+    });
+
+    res.json({ token });
+  } catch (err) {
+    console.error('Login error:', err.message);
+    res.status(401).json({ message: 'Invalid credentials' });
+  }
 });
 
 app.get('/protected', verifyToken, (req, res) => {
