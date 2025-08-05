@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useTheme } from './ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "./firebase"; // adjust path if needed
+import { auth, db } from "../firebase"; // adjust path if needed
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 

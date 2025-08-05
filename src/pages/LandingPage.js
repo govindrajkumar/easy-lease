@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useTheme } from './ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 import { Link } from 'react-router-dom';
 import './App.css'; // Tailwind CSS should be configured here
 
