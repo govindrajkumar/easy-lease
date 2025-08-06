@@ -86,14 +86,18 @@ function LandingPage() {
                   {key.charAt(0).toUpperCase() + key.slice(1)}
                 </a>
               ))}
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <button className="w-full text-left py-2 mb-2">Login</button>
-                <button className="w-full text-left py-2">Sign Up</button>
-              </div>
-            </nav>
-          </div>
-        )}
-      </header>
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <Link to="/signin" className="w-full text-left py-2 mb-2" onClick={() => setMobileMenu(false)}>
+                    Login
+                  </Link>
+                  <Link to="/signup" className="w-full text-left py-2" onClick={() => setMobileMenu(false)}>
+                    Sign Up
+                  </Link>
+                </div>
+              </nav>
+            </div>
+          )}
+        </header>
 
       {/* Hero */}
       <section id="home" ref={sections.home} className="pt-32 pb-24 bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
@@ -104,10 +108,10 @@ function LandingPage() {
             </h1>
             <p className="text-lg lg:text-xl text-gray-200 max-w-xl">Powerful dashboard, automated reminders, and seamless integrations to keep your properties running smoothly.</p>
             <div className="flex flex-wrap gap-4 mt-4">
-              <a href="#" className="px-6 py-3 rounded-full bg-white text-indigo-600 font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transform transition">Get Started</a>
-              <a href="#" className="inline-flex items-center gap-2 px-4 py-2 border border-white rounded-md hover:bg-white/20 transition text-sm lg:text-base">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16"/></svg>Watch Demo
-              </a>
+                <Link to="/signin" className="px-6 py-3 rounded-full bg-white text-indigo-600 font-semibold shadow-lg hover:shadow-xl hover:-translate-y-1 transform transition">Get Started</Link>
+                <a href="#" className="inline-flex items-center gap-2 px-4 py-2 border border-white rounded-md hover:bg-white/20 transition text-sm lg:text-base">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16"/></svg>Watch Demo
+                </a>
             </div>
           </div>
         </div>
@@ -225,8 +229,8 @@ function LandingPage() {
                 <li>✅ Basic features</li>
                 <li>✅ Email support</li>
               </ul>
-              <button className="px-6 py-3 rounded-full bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition">Get Started</button>
-            </div>
+                <Link to="/signin" className="px-6 py-3 rounded-full bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition">Get Started</Link>
+              </div>
             <div className="p-10 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-4 border-indigo-600 hover:scale-105 transform transition duration-500">
               <h3 className="text-2xl font-semibold mb-4">Pro Plan</h3>
               <p className="text-5xl font-bold mb-4">$29<span className="text-lg font-normal">/month</span></p>

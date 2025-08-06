@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 
 export default function TenantDashboard() {
   const navigate = useNavigate();
@@ -14,6 +14,7 @@ export default function TenantDashboard() {
   const [property, setProperty] = useState(null);
   const [lease, setLease] = useState(null);
   const [uploadMessage, setUploadMessage] = useState('');
+  const [unread, setUnread] = useState(0);
 
   const userFirstName = sessionStorage.getItem('user_first_name');
   const userEmail = sessionStorage.getItem('user_email');
@@ -45,7 +46,24 @@ export default function TenantDashboard() {
     };
 
     fetchUserStatus();
-  }, [navigate]);
+    }, [navigate]);
+
+  useEffect(() => {
+    let unsubMessages;
+    const unsubAuth = auth.onAuthStateChanged((u) => {
+      if (unsubMessages) unsubMessages();
+      if (u) {
+        const q = query(collection(db, 'Messages'), where('to', '==', u.uid), where('read', '==', false));
+        unsubMessages = onSnapshot(q, (snap) => setUnread(snap.size));
+      } else {
+        setUnread(0);
+      }
+    });
+    return () => {
+      if (unsubMessages) unsubMessages();
+      unsubAuth();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchLeaseInfo = async () => {
@@ -235,7 +253,7 @@ export default function TenantDashboard() {
           <nav className="px-4 space-y-2 mt-4">
             <a href="/tenant-dashboard" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">📄 Lease Info</a>
             <a href="/tenant-payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments</a>
-            <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
+            <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance{unread > 0 && <span className="ml-2 bg-red-500 text-white rounded-full text-xs px-2">{unread}</span>}</a>
             <a href="/tenant-announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
             <a href="/tenant-settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👤 Profile &amp; Settings</a>
           </nav>
@@ -281,13 +299,14 @@ export default function TenantDashboard() {
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
               <h3 className="text-sm text-gray-500 dark:text-gray-400">Lease Agreement</h3>
-              <a
-                href="https://forms.mgcs.gov.on.ca/dataset/edff7620-980b-455f-9666-643196d8312f/resource/929691d6-56bf-4d64-8474-0e434bb2d32d/download/2229e.pdf"
-                className="text-blue-600 dark:text-blue-400 underline mt-2 inline-block"
-                download
-              >
-                Download Standard Lease
-              </a>
+                <a
+                  href="https://forms.mgcs.gov.on.ca/dataset/edff7620-980b-455f-9666-643196d8312f/resource/929691d6-56bf-4d64-8474-0e434bb2d32d/download/2229e.pdf"
+                  className="text-blue-600 dark:text-blue-400 underline mt-2 inline-block"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Download Standard Lease
+                </a>
               <div className="mt-4">
                 <label className="block text-sm mb-2 dark:text-gray-300">Upload signed agreement</label>
                 <input
@@ -300,13 +319,14 @@ export default function TenantDashboard() {
                   <p className="mt-2 text-green-600 dark:text-green-400">{uploadMessage}</p>
                 )}
                 {lease && lease.signed_agreement && (
-                  <a
-                    href={lease.signed_agreement}
-                    download="signed_agreement.pdf"
-                    className="text-blue-600 dark:text-blue-400 underline mt-2 block"
-                  >
-                    View Uploaded Agreement
-                  </a>
+                    <a
+                      href={lease.signed_agreement}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 underline mt-2 block"
+                    >
+                      View Uploaded Agreement
+                    </a>
                 )}
               </div>
             </div>

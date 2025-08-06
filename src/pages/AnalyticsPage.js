@@ -225,20 +225,18 @@ export default function AnalyticsPage() {
           </div>
 
           {expenseChartData && (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow mb-8">
-              <Bar data={expenseChartData} />
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow mb-8 h-64">
+              <Bar data={expenseChartData} options={{ maintainAspectRatio: false }} />
             </div>
           )}
           {rentChartData && (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow mb-8">
-              <Line data={rentChartData} />
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow mb-8 h-64">
+              <Line data={rentChartData} options={{ maintainAspectRatio: false }} />
             </div>
           )}
           {occupancyChartData && (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow flex justify-center">
-              <div className="w-64 h-64">
-                <Pie data={occupancyChartData} options={{ maintainAspectRatio: false }} />
-              </div>
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow flex justify-center h-64">
+              <Pie data={occupancyChartData} options={{ maintainAspectRatio: false }} />
             </div>
           )}
         </div>
