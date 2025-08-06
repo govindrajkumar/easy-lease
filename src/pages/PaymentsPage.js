@@ -11,6 +11,7 @@ import {
   where,
   updateDoc,
   serverTimestamp,
+  addDoc,
 } from 'firebase/firestore';
 
 export default function PaymentsPage() {
@@ -95,6 +96,18 @@ export default function PaymentsPage() {
       computeStats(updated);
       return updated;
     });
+  };
+
+  const sendReminder = async (p) => {
+    await addDoc(collection(db, 'RentReminders'), {
+      tenant_uid: p.tenant_uid,
+      property_id: p.property_id,
+      amount: p.amount,
+      due_date: p.due_date,
+      landlord_uid: user.uid,
+      created_at: serverTimestamp(),
+    });
+    alert('Reminder sent');
   };
 
   return (
@@ -200,7 +213,7 @@ export default function PaymentsPage() {
                         )}
                         <button
                           className="px-2 py-1 bg-gray-200 rounded"
-                          onClick={() => alert('Reminder sent')}
+                          onClick={() => sendReminder(p)}
                         >
                           Reminder
                         </button>

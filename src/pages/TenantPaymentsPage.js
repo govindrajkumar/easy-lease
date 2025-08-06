@@ -15,6 +15,7 @@ import {
 export default function TenantPaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [history, setHistory] = useState([]);
+  const [reminders, setReminders] = useState([]);
   const [firstName, setFirstName] = useState('');
   const [user, setUser] = useState(null);
   const [activePayment, setActivePayment] = useState(null);
@@ -65,6 +66,22 @@ export default function TenantPaymentsPage() {
         );
         setPayments(unpaid);
         setHistory(paid);
+
+        const remSnap = await getDocs(
+          query(collection(db, 'RentReminders'), where('tenant_uid', '==', u.uid))
+        );
+        const rems = await Promise.all(
+          remSnap.docs.map(async (d) => {
+            const r = d.data();
+            const propSnap = await getDoc(doc(db, 'Properties', r.property_id));
+            return {
+              id: d.id,
+              propertyName: propSnap.exists() ? propSnap.data().name : '',
+              ...r,
+            };
+          })
+        );
+        setReminders(rems);
       }
     });
     return () => unsubscribe();
@@ -124,6 +141,25 @@ export default function TenantPaymentsPage() {
         </aside>
 
         <div className="flex-1 p-6 overflow-y-auto space-y-8">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow space-y-4">
+            <h2 className="text-lg font-semibold">Rent Reminders</h2>
+            <div className="space-y-4">
+              {reminders.map((r) => (
+                <div key={r.id} className="bg-yellow-50 dark:bg-yellow-900 p-4 rounded-lg shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">{r.propertyName}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Due {r.due_date}</p>
+                    </div>
+                    <span className="font-semibold">${r.amount}</span>
+                  </div>
+                </div>
+              ))}
+              {reminders.length === 0 && (
+                <p className="text-gray-500 dark:text-gray-400 text-center">No reminders.</p>
+              )}
+            </div>
+          </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow space-y-4">
             <h2 className="text-lg font-semibold">Outstanding Invoices</h2>
             <div className="space-y-4">
