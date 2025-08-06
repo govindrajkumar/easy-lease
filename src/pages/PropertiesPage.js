@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { auth, db } from '../firebase';
-import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where, deleteDoc, updateDoc } from 'firebase/firestore';
+import { auth, db, storage } from '../firebase';
+import { doc, getDoc, collection, setDoc, serverTimestamp, getDocs, query, where, deleteDoc, updateDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 
 export default function PropertiesPage() {
@@ -20,6 +21,7 @@ export default function PropertiesPage() {
     province: '',
     zip_code: '',
     photo: '',
+    photoFile: null,
   });
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [currentProp, setCurrentProp] = useState(null);
@@ -101,7 +103,7 @@ export default function PropertiesPage() {
   };
 
   const openEdit = (prop) => {
-    setEditProperty({ ...prop });
+    setEditProperty({ ...prop, photoFile: null });
     setEditError('');
     setShowEditModal(true);
   };
@@ -110,7 +112,8 @@ export default function PropertiesPage() {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => setNewProperty({ ...newProperty, photo: reader.result });
+    reader.onloadend = () =>
+      setNewProperty({ ...newProperty, photo: reader.result, photoFile: file });
     reader.readAsDataURL(file);
   };
 
@@ -118,7 +121,8 @@ export default function PropertiesPage() {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => setEditProperty((prev) => ({ ...prev, photo: reader.result }));
+    reader.onloadend = () =>
+      setEditProperty((prev) => ({ ...prev, photo: reader.result, photoFile: file }));
     reader.readAsDataURL(file);
   };
 
@@ -143,7 +147,14 @@ export default function PropertiesPage() {
     }
 
     try {
-      const docRef = await addDoc(collection(db, 'Properties'), {
+      const docRef = doc(collection(db, 'Properties'));
+      let photoURL = '';
+      if (newProperty.photoFile) {
+        const imageRef = ref(storage, `properties/${docRef.id}`);
+        await uploadBytes(imageRef, newProperty.photoFile);
+        photoURL = await getDownloadURL(imageRef);
+      }
+      await setDoc(docRef, {
         name: newProperty.name,
         description: newProperty.description,
         address_line1: newProperty.address_line1,
@@ -151,14 +162,13 @@ export default function PropertiesPage() {
         city: newProperty.city,
         province: newProperty.province,
         zip_code: newProperty.zip_code,
-        photo: newProperty.photo || '',
+        photo: photoURL,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
         landlord_id: user?.uid || '',
       });
 
-      // Fetch the new property with its ID and all fields
-      const snap = await getDoc(doc(db, 'Properties', docRef.id));
+      const snap = await getDoc(docRef);
       if (snap.exists()) {
         setProperties((prev) => [{ id: snap.id, ...snap.data() }, ...prev]);
       }
@@ -173,6 +183,7 @@ export default function PropertiesPage() {
         province: '',
         zip_code: '',
         photo: '',
+        photoFile: null,
       });
       setTimeout(() => {
         setShowAddModal(false);
@@ -191,6 +202,12 @@ export default function PropertiesPage() {
     setEditLoading(true);
     try {
       const docRef = doc(db, 'Properties', editProperty.id);
+      let photoURL = editProperty.photo || '';
+      if (editProperty.photoFile) {
+        const imageRef = ref(storage, `properties/${editProperty.id}`);
+        await uploadBytes(imageRef, editProperty.photoFile);
+        photoURL = await getDownloadURL(imageRef);
+      }
       await updateDoc(docRef, {
         name: editProperty.name,
         description: editProperty.description,
@@ -199,10 +216,12 @@ export default function PropertiesPage() {
         city: editProperty.city,
         province: editProperty.province,
         zip_code: editProperty.zip_code,
-        photo: editProperty.photo || '',
+        photo: photoURL,
         updated_at: serverTimestamp(),
       });
-      setProperties((prev) => prev.map((p) => (p.id === editProperty.id ? { ...p, ...editProperty } : p)));
+      setProperties((prev) =>
+        prev.map((p) => (p.id === editProperty.id ? { ...p, ...editProperty, photo: photoURL } : p))
+      );
       setShowEditModal(false);
     } catch {
       setEditError('Failed to save property.');
