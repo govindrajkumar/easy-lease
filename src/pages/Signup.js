@@ -1,13 +1,12 @@
 import React, { useState } from "react";
-import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import ThemeToggle from '../components/ThemeToggle';
 import { auth, db } from "../firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp, addDoc, collection } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export default function SignUp() {
-  const { darkMode, toggleDarkMode } = useTheme();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
@@ -90,21 +89,7 @@ export default function SignUp() {
           >
             EasyLease
           </h1>
-          <button
-            onClick={toggleDarkMode}
-            aria-label="Toggle theme"
-            className="p-2 rounded focus:outline-none"
-          >
-            {darkMode ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-300" fill="currentColor">
-                <path d="M10 2a8 8 0 017.446 4.908A6 6 0 1010 2z" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1" />
-              </svg>
-            )}
-          </button>
+          <ThemeToggle className="p-2 rounded focus:outline-none" />
         </div>
       </header>
 
@@ -189,7 +174,7 @@ export default function SignUp() {
                 onClick={() => setShowPass(!showPass)}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
               >
-                {showPass ? '🙈' : '👁️'}
+                {showPass ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
 
@@ -208,7 +193,7 @@ export default function SignUp() {
                 onClick={() => setShowPass(!showPass)}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
               >
-                {showPass ? '🙈' : '👁️'}
+                {showPass ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
 

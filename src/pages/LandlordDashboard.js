@@ -32,6 +32,9 @@ export default function LandlordDashboard() {
   const [rentCollected, setRentCollected] = useState(0);
   const [rentDue, setRentDue] = useState(0);
   const [latePayments, setLatePayments] = useState(0);
+  const [upcomingPayments, setUpcomingPayments] = useState([]);
+  const [recentMaintenance, setRecentMaintenance] = useState([]);
+  const [propertyMap, setPropertyMap] = useState({});
   const { darkMode } = useTheme();
   const navigate = useNavigate();
 
@@ -61,6 +64,21 @@ export default function LandlordDashboard() {
 
   useEffect(() => {
     if (!user) return;
+    const fetchProperties = async () => {
+      const snap = await getDocs(
+        query(collection(db, 'Properties'), where('landlord_id', '==', user.uid))
+      );
+      const map = {};
+      snap.forEach((d) => {
+        map[d.id] = d.data().name;
+      });
+      setPropertyMap(map);
+    };
+    fetchProperties();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
     const fetchData = async () => {
       try {
         const q = query(
@@ -69,11 +87,13 @@ export default function LandlordDashboard() {
         );
         const snap = await getDocs(q);
         let open = 0;
+        const reqs = [];
         const start = new Date();
         start.setDate(1);
         start.setHours(0, 0, 0, 0);
         snap.forEach((d) => {
           const data = d.data();
+          reqs.push({ id: d.id, ...data });
           if (data.status === 'Open') open += 1;
           if (data.status === 'Resolved' && data.expense) {
             const created = data.created_at?.seconds
@@ -84,6 +104,16 @@ export default function LandlordDashboard() {
             }
           }
         });
+        reqs.sort((a, b) => {
+          const aDate = a.created_at?.seconds
+            ? new Date(a.created_at.seconds * 1000)
+            : new Date(0);
+          const bDate = b.created_at?.seconds
+            ? new Date(b.created_at.seconds * 1000)
+            : new Date(0);
+          return bDate - aDate;
+        });
+        setRecentMaintenance(reqs.slice(0, 3));
         setTotalRequests(snap.size);
         setNewRequests(open);
       } catch (e) {
@@ -118,7 +148,7 @@ export default function LandlordDashboard() {
         const snap = await getDocs(
           query(collection(db, 'RentPayments'), where('landlord_uid', '==', user.uid))
         );
-        const data = snap.docs.map((d) => d.data());
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         let collected = 0;
         let due = 0;
         let late = 0;
@@ -131,6 +161,19 @@ export default function LandlordDashboard() {
             if (new Date(p.due_date) < now) late += 1;
           }
         });
+        const upcoming = data
+          .filter((p) => !p.paid)
+          .map((p) => ({ ...p, dueDate: new Date(p.due_date) }))
+          .filter((p) => p.dueDate >= now)
+          .sort((a, b) => a.dueDate - b.dueDate)
+          .slice(0, 4)
+          .map((p) => ({
+            id: p.id,
+            property: propertyMap[p.property_id] || 'Unknown',
+            dueDate: p.dueDate,
+            amount: p.amount,
+          }));
+        setUpcomingPayments(upcoming);
         setRentCollected(collected);
         setRentDue(due);
         setLatePayments(late);
@@ -139,11 +182,25 @@ export default function LandlordDashboard() {
       }
     };
     fetchPayments();
-  }, [user]);
+  }, [user, propertyMap]);
 
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/signin');
+  };
+
+  const formatDue = (date) => {
+    const diff = Math.ceil((date - new Date()) / (1000 * 60 * 60 * 24));
+    if (diff <= 0) return 'Due today';
+    if (diff === 1) return 'Due in 1 day';
+    return `Due in ${diff} days`;
+  };
+
+  const statusColor = {
+    Open: 'text-red-500 dark:text-red-400',
+    'In Progress': 'text-yellow-500 dark:text-yellow-400',
+    Resolved: 'text-green-500 dark:text-green-400',
+    Completed: 'text-green-500 dark:text-green-400',
   };
 
   return (
@@ -313,22 +370,16 @@ export default function LandlordDashboard() {
               <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                 <h3 className="font-semibold text-lg mb-4 dark:text-gray-100">Upcoming Payments</h3>
                 <ul className="space-y-3 text-gray-700 dark:text-gray-200">
-                  <li className="flex justify-between">
-                    <span>Oakwood Apartments #304 - Due in 2 days</span>
-                    <span className="font-medium">$1,250</span>
-                  </li>
-                  <li className="flex justify-between">
-                    <span>Riverside Condos #142 - Due in 3 days</span>
-                    <span className="font-medium">$1,450</span>
-                  </li>
-                  <li className="flex justify-between">
-                    <span>Pine Street House - Due in 5 days</span>
-                    <span className="font-medium">$1,850</span>
-                  </li>
-                  <li className="flex justify-between">
-                    <span>Maple Avenue Duplex - Due in 7 days</span>
-                    <span className="font-medium">$1,600</span>
-                  </li>
+                  {upcomingPayments.length > 0 ? (
+                    upcomingPayments.map((p) => (
+                      <li key={p.id} className="flex justify-between">
+                        <span>{`${p.property} - ${formatDue(p.dueDate)}`}</span>
+                        <span className="font-medium">${p.amount}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-sm text-gray-500">No upcoming payments</li>
+                  )}
                 </ul>
                 <a href="/payments" className="mt-4 inline-block text-purple-700 font-medium hover:underline dark:text-purple-300">
                   View all payments
@@ -339,39 +390,25 @@ export default function LandlordDashboard() {
               <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                 <h3 className="font-semibold text-lg mb-4 dark:text-gray-100">Recent Maintenance</h3>
                 <ul className="space-y-3 text-gray-700 dark:text-gray-200">
-                  <li>
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="font-medium">Leaking faucet</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Riverside Condos #142 · <span className="text-red-500 dark:text-red-400">Urgent</span>
-                        </p>
-                      </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">2 hours ago</span>
-                    </div>
-                  </li>
-                  <li>
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="font-medium">Electrical issue</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Oakwood Apartments #304 · <span className="text-yellow-500 dark:text-yellow-400">In Progress</span>
-                        </p>
-                      </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">1 day ago</span>
-                    </div>
-                  </li>
-                  <li>
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="font-medium">HVAC maintenance</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Pine Street House · <span className="text-green-500 dark:text-green-400">Completed</span>
-                        </p>
-                      </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">2 days ago</span>
-                    </div>
-                  </li>
+                  {recentMaintenance.length > 0 ? (
+                    recentMaintenance.map((r) => (
+                      <li key={r.id}>
+                        <div className="flex justify-between">
+                          <div>
+                            <p className="font-medium">{r.title}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {propertyMap[r.property_id] || 'Unknown'} · <span className={statusColor[r.status] || ''}>{r.status}</span>
+                            </p>
+                          </div>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {r.created_at?.seconds ? new Date(r.created_at.seconds * 1000).toLocaleDateString() : ''}
+                          </span>
+                        </div>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-sm text-gray-500">No recent requests</li>
+                  )}
                 </ul>
                 <a href="/maintenance" className="mt-4 inline-block text-purple-700 font-medium hover:underline dark:text-purple-300">
                   View all requests

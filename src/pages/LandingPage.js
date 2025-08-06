@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useTheme } from '../context/ThemeContext';
 import { Link } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle';
 import './App.css'; // Tailwind CSS should be configured here
 
 function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { darkMode, toggleDarkMode } = useTheme();
   const [activeSection, setActiveSection] = useState('home');
 
   // Refs for sections
@@ -35,10 +34,6 @@ function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Dark mode toggle
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-  }, [darkMode]);
 
   // Testimonials data
   const testimonialsData = [
@@ -52,9 +47,7 @@ function LandingPage() {
       {/* Header */}
       <header className={`fixed w-full z-50 backdrop-blur-lg bg-white dark:bg-gray-900 transition-shadow ${scrolled ? 'shadow-xl' : ''}`}>  
         <div className="container mx-auto flex items-center justify-between px-6 lg:px-8 py-4">
-          <button onClick={toggleDarkMode} className="text-2xl font-extrabold focus:outline-none">
-            EasyLease
-          </button>
+          <h1 className="text-2xl font-extrabold">EasyLease</h1>
           <nav className="hidden md:flex space-x-10 text-lg font-medium">
             {Object.keys(sections).map(key => (
               <a
@@ -64,7 +57,8 @@ function LandingPage() {
               >{key.charAt(0).toUpperCase() + key.slice(1)}</a>
             ))}
           </nav>
-          <div className="hidden md:flex space-x-4">
+          <div className="hidden md:flex items-center space-x-4">
+            <ThemeToggle className="p-2 rounded focus:outline-none" />
             <Link to="/signin" className="px-4 py-2 rounded-md text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">
               Log In
             </Link>
@@ -72,11 +66,14 @@ function LandingPage() {
               Sign Up
             </Link>
           </div>
-          <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden p-2 focus:outline-none">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
+          <div className="md:hidden flex items-center space-x-2">
+            <ThemeToggle className="p-2 rounded focus:outline-none" />
+            <button onClick={() => setMobileMenu(!mobileMenu)} className="p-2 focus:outline-none">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
         </div>
         {mobileMenu && (
           <div className="md:hidden bg-white dark:bg-gray-900 shadow-lg">
