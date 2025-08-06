@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../firebase';
-import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where, deleteDoc, updateDoc } from 'firebase/firestore';
 
 
 export default function PropertiesPage() {
@@ -19,6 +19,7 @@ export default function PropertiesPage() {
     city: '',
     province: '',
     zip_code: '',
+    photo: '',
   });
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [currentProp, setCurrentProp] = useState(null);
@@ -30,6 +31,11 @@ export default function PropertiesPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editProperty, setEditProperty] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [propertyLeases, setPropertyLeases] = useState([]);
   const navigate = useNavigate();
 
   // System theme detection (set once on mount)
@@ -80,10 +86,40 @@ export default function PropertiesPage() {
     navigate('/signin');
   };
 
-  const openDetail = (prop) => {
+  const openDetail = async (prop) => {
     setCurrentProp(prop);
     setCurrentTab('overview');
     setShowDetailModal(true);
+    try {
+      const q = query(collection(db, 'Leases'), where('property_id', '==', prop.id));
+      const snap = await getDocs(q);
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setPropertyLeases(list);
+    } catch {
+      setPropertyLeases([]);
+    }
+  };
+
+  const openEdit = (prop) => {
+    setEditProperty({ ...prop });
+    setEditError('');
+    setShowEditModal(true);
+  };
+
+  const handleAddImage = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setNewProperty({ ...newProperty, photo: reader.result });
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditImage = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setEditProperty((prev) => ({ ...prev, photo: reader.result }));
+    reader.readAsDataURL(file);
   };
 
   // Add property to Firestore
@@ -115,6 +151,7 @@ export default function PropertiesPage() {
         city: newProperty.city,
         province: newProperty.province,
         zip_code: newProperty.zip_code,
+        photo: newProperty.photo || '',
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
         landlord_id: user?.uid || '',
@@ -135,6 +172,7 @@ export default function PropertiesPage() {
         city: '',
         province: '',
         zip_code: '',
+        photo: '',
       });
       setTimeout(() => {
         setShowAddModal(false);
@@ -144,6 +182,33 @@ export default function PropertiesPage() {
       setAddError('Failed to add property. Please try again.');
     }
     setAddLoading(false);
+  };
+
+  const handleEditProperty = async (e) => {
+    e.preventDefault();
+    if (!editProperty) return;
+    setEditError('');
+    setEditLoading(true);
+    try {
+      const docRef = doc(db, 'Properties', editProperty.id);
+      await updateDoc(docRef, {
+        name: editProperty.name,
+        description: editProperty.description,
+        address_line1: editProperty.address_line1,
+        address_line2: editProperty.address_line2,
+        city: editProperty.city,
+        province: editProperty.province,
+        zip_code: editProperty.zip_code,
+        photo: editProperty.photo || '',
+        updated_at: serverTimestamp(),
+      });
+      setProperties((prev) => prev.map((p) => (p.id === editProperty.id ? { ...p, ...editProperty } : p)));
+      setShowEditModal(false);
+    } catch {
+      setEditError('Failed to save property.');
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   // Delete property handler
@@ -218,76 +283,48 @@ export default function PropertiesPage() {
 
         {/* Properties Table */}
         <main className="pt-24 p-6 overflow-auto mx-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
-            <table className="min-w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Address</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">City</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Province</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Tenants</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y dark:divide-gray-700">
-                {properties.map((prop) => (
-                  <tr
-                    key={prop.id}
-                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    <td
-                      className="px-6 py-4 text-sm dark:text-gray-100"
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {properties.map((prop) => (
+              <div key={prop.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
+                <div className="w-full aspect-square overflow-hidden">
+                  {prop.photo ? (
+                    <img src={prop.photo} alt={prop.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-400">
+                      No Image
+                    </div>
+                  )}
+                </div>
+                <div className="p-4 space-y-2">
+                  <h3 className="text-lg font-semibold dark:text-gray-100">{prop.name}</h3>
+                  <p className="text-sm dark:text-gray-300">{prop.city}{prop.province ? `, ${prop.province}` : ''}</p>
+                  <div className="flex justify-end space-x-2 pt-2">
+                    <button
+                      className="px-3 py-1 bg-blue-500 text-white rounded"
                       onClick={() => openDetail(prop)}
                     >
-                      {prop.name}
-                    </td>
-                    <td
-                      className="px-6 py-4 text-sm dark:text-gray-100"
-                      onClick={() => openDetail(prop)}
+                      Details
+                    </button>
+                    <button
+                      className="px-3 py-1 bg-green-600 text-white rounded"
+                      onClick={() => openEdit(prop)}
                     >
-                      {prop.address_line1
-                        ? prop.address_line1
-                        : <span className="italic text-gray-400 dark:text-gray-500">No address</span>}
-                    </td>
-                    <td
-                      className="px-6 py-4 text-sm dark:text-gray-100"
-                      onClick={() => openDetail(prop)}
+                      Modify
+                    </button>
+                    <button
+                      className="px-3 py-1 bg-red-500 text-white rounded"
+                      onClick={() => setDeleteId(prop.id)}
+                      disabled={deleteLoading}
                     >
-                      {prop.city || <span className="italic text-gray-400 dark:text-gray-500">—</span>}
-                    </td>
-                    <td
-                      className="px-6 py-4 text-sm dark:text-gray-100"
-                      onClick={() => openDetail(prop)}
-                    >
-                      {prop.province || <span className="italic text-gray-400 dark:text-gray-500">—</span>}
-                    </td>
-                    <td
-                      className="px-6 py-4 text-sm dark:text-gray-100"
-                      onClick={() => openDetail(prop)}
-                    >
-                      {Array.isArray(prop.tenants) ? prop.tenants.length : 0}
-                    </td>
-                    <td className="px-6 py-4 text-sm dark:text-gray-100">
-                      <button
-                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                        onClick={() => setDeleteId(prop.id)}
-                        disabled={deleteLoading}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {properties.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400 dark:text-gray-500">
-                      No properties found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {properties.length === 0 && (
+              <div className="col-span-full text-center text-gray-400 dark:text-gray-500">No properties found.</div>
+            )}
           </div>
         </main>
 
@@ -371,6 +408,22 @@ export default function PropertiesPage() {
                     required
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium dark:text-gray-300">Photo</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAddImage}
+                    className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
+                  />
+                  {newProperty.photo && (
+                    <img
+                      src={newProperty.photo}
+                      alt="preview"
+                      className="mt-2 w-24 h-24 object-cover rounded"
+                    />
+                  )}
+                </div>
                 {addError && <div className="text-red-500 text-center">{addError}</div>}
                 {addSuccess && <div className="text-green-600 text-center">{addSuccess}</div>}
                 <div className="flex justify-end space-x-2 mt-2">
@@ -394,13 +447,131 @@ export default function PropertiesPage() {
           </div>
         )}
 
+        {/* Edit Property Modal */}
+        {showEditModal && editProperty && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg relative">
+              <button
+                className="absolute top-4 right-4 text-gray-500 dark:text-gray-300 text-2xl"
+                onClick={() => setShowEditModal(false)}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+              <h2 className="text-xl font-semibold mb-4 dark:text-gray-100">Modify Property</h2>
+              <form className="space-y-4" onSubmit={handleEditProperty}>
+                <div>
+                  <label className="block text-sm font-medium dark:text-gray-300">Name*</label>
+                  <input
+                    type="text"
+                    value={editProperty.name}
+                    onChange={(e) => setEditProperty({ ...editProperty, name: e.target.value })}
+                    className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium dark:text-gray-300">Description</label>
+                  <textarea
+                    value={editProperty.description}
+                    onChange={(e) => setEditProperty({ ...editProperty, description: e.target.value })}
+                    className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium dark:text-gray-300">Address Line 1*</label>
+                  <input
+                    type="text"
+                    value={editProperty.address_line1}
+                    onChange={(e) => setEditProperty({ ...editProperty, address_line1: e.target.value })}
+                    className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium dark:text-gray-300">Address Line 2</label>
+                  <input
+                    type="text"
+                    value={editProperty.address_line2}
+                    onChange={(e) => setEditProperty({ ...editProperty, address_line2: e.target.value })}
+                    className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium dark:text-gray-300">City*</label>
+                  <input
+                    type="text"
+                    value={editProperty.city}
+                    onChange={(e) => setEditProperty({ ...editProperty, city: e.target.value })}
+                    className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium dark:text-gray-300">Province*</label>
+                  <input
+                    type="text"
+                    value={editProperty.province}
+                    onChange={(e) => setEditProperty({ ...editProperty, province: e.target.value })}
+                    className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium dark:text-gray-300">Zip Code*</label>
+                  <input
+                    type="text"
+                    value={editProperty.zip_code}
+                    onChange={(e) => setEditProperty({ ...editProperty, zip_code: e.target.value })}
+                    className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium dark:text-gray-300">Photo</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditImage}
+                    className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
+                  />
+                  {editProperty.photo && (
+                    <img
+                      src={editProperty.photo}
+                      alt="preview"
+                      className="mt-2 w-24 h-24 object-cover rounded"
+                    />
+                  )}
+                </div>
+                {editError && <div className="text-red-500 text-center">{editError}</div>}
+                <div className="flex justify-end space-x-2 mt-2">
+                  <button
+                    type="button"
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 rounded"
+                    onClick={() => setShowEditModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-purple-600 text-white rounded dark:bg-purple-700"
+                    disabled={editLoading}
+                  >
+                    {editLoading ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Property Detail Modal */}
         {showDetailModal && currentProp && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md relative">
               <button
                 className="text-gray-500 dark:text-gray-300 absolute top-4 right-4 text-2xl"
-                onClick={() => setShowDetailModal(false)}
+                onClick={() => { setShowDetailModal(false); setPropertyLeases([]); }}
               >
                 &times;
               </button>
@@ -424,6 +595,19 @@ export default function PropertiesPage() {
                 {currentProp.description && (
                   <p className="dark:text-gray-200 whitespace-pre-line">{currentProp.description}</p>
                 )}
+                {propertyLeases.map((l) => (
+                  l.signed_agreement ? (
+                    <p key={l.id} className="dark:text-gray-200">
+                      <a
+                        href={l.signed_agreement}
+                        download={`signed_agreement_${l.id}.pdf`}
+                        className="text-blue-600 underline"
+                      >
+                        Download Signed Agreement
+                      </a>
+                    </p>
+                  ) : null
+                ))}
               </div>
             </div>
           </div>
