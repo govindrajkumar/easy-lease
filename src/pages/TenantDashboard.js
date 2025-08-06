@@ -13,6 +13,7 @@ export default function TenantDashboard() {
 
   const [property, setProperty] = useState(null);
   const [lease, setLease] = useState(null);
+  const [uploadMessage, setUploadMessage] = useState('');
 
   const userFirstName = sessionStorage.getItem('user_first_name');
   const userEmail = sessionStorage.getItem('user_email');
@@ -79,6 +80,22 @@ export default function TenantDashboard() {
   const handleLogout = () => {
     sessionStorage.clear();
     navigate('/');
+  };
+
+  const handleAgreementUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file || !lease) return;
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        await updateDoc(doc(db, 'Leases', lease.id), { signed_agreement: reader.result });
+        setLease((prev) => ({ ...prev, signed_agreement: reader.result }));
+        setUploadMessage('Agreement uploaded successfully.');
+      } catch {
+        setUploadMessage('Failed to upload agreement.');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRequestSubmit = async (e) => {
@@ -260,6 +277,37 @@ export default function TenantDashboard() {
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                 <h3 className="text-sm text-gray-500 dark:text-gray-400">Security Deposit</h3>
                 <p className="text-2xl font-semibold mt-2 dark:text-gray-100">{lease ? `$${lease.security_deposit}` : 'N/A'}</p>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+              <h3 className="text-sm text-gray-500 dark:text-gray-400">Lease Agreement</h3>
+              <a
+                href="https://forms.mgcs.gov.on.ca/dataset/edff7620-980b-455f-9666-643196d8312f/resource/929691d6-56bf-4d64-8474-0e434bb2d32d/download/2229e.pdf"
+                className="text-blue-600 dark:text-blue-400 underline mt-2 inline-block"
+                download
+              >
+                Download Standard Lease
+              </a>
+              <div className="mt-4">
+                <label className="block text-sm mb-2 dark:text-gray-300">Upload signed agreement</label>
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={handleAgreementUpload}
+                  className="text-sm"
+                />
+                {uploadMessage && (
+                  <p className="mt-2 text-green-600 dark:text-green-400">{uploadMessage}</p>
+                )}
+                {lease && lease.signed_agreement && (
+                  <a
+                    href={lease.signed_agreement}
+                    download="signed_agreement.pdf"
+                    className="text-blue-600 dark:text-blue-400 underline mt-2 block"
+                  >
+                    View Uploaded Agreement
+                  </a>
+                )}
               </div>
             </div>
           </main>
