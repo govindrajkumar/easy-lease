@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import ThemeToggle from './ThemeToggle';
 import '../index.css'; // Assuming you'll move the CSS here or use Tailwind CSS directly
 
 function AuthPage() {
-  const { darkMode, toggleDarkMode } = useTheme();
+  const { darkMode } = useTheme();
   const [mode, setMode] = useState('signin'); // 'signin' or 'signup'
   const [form, setForm] = useState({
     role: 'landlord',
@@ -48,20 +50,8 @@ function AuthPage() {
         {/* Header */}
         <header className="bg-white dark:bg-gray-800 shadow-md fixed w-full z-10">
           <div className="container mx-auto flex items-center justify-between px-6 py-4">
-            <span className="text-2xl font-bold cursor-pointer" onClick={toggleDarkMode}>
-              EasyLease
-            </span>
-            <button onClick={toggleDarkMode} aria-label="Toggle dark mode" className="p-2 rounded focus:outline-none">
-              {darkMode ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-300" fill="currentColor">
-                  <path d="M10 2a8 8 0 017.446 4.908A6 6 0 1010 2z" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1" />
-                </svg>
-              )}
-            </button>
+            <span className="text-2xl font-bold">EasyLease</span>
+            <ThemeToggle className="p-2 rounded focus:outline-none" />
           </div>
         </header>
 
@@ -113,7 +103,7 @@ function AuthPage() {
                     className="mt-1 block w-full h-12 px-4 border-gray-300 dark:border-gray-700 rounded-lg shadow-sm dark:bg-gray-900 pr-10 focus:border-indigo-500 focus:ring-indigo-500"
                   />
                   <button type="button" onClick={() => setShowPass(!showPass)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
-                    {showPass ? <span>🙈</span> : <span>👁️</span>}
+                    {showPass ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
                 <div className="flex justify-between items-center">
@@ -223,7 +213,7 @@ function AuthPage() {
                     className="mt-1 block w-full h-12 px-4 border-gray-300 dark:border-gray-700 rounded-lg shadow-sm dark:bg-gray-900 pr-10 focus:border-indigo-500 focus:ring-indigo-500"
                   />
                   <button type="button" onClick={() => setShowPass(!showPass)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
-                    {showPass ? <span>🙈</span> : <span>👁️</span>}
+                    {showPass ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
                 <div className="relative">
@@ -237,7 +227,7 @@ function AuthPage() {
                     className="mt-1 block w-full h-12 px-4 border-gray-300 dark:border-gray-700 rounded-lg shadow-sm dark:bg-gray-900 pr-10 focus:border-indigo-500 focus:ring-indigo-500"
                   />
                   <button type="button" onClick={() => setShowPass(!showPass)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
-                    {showPass ? <span>🙈</span> : <span>👁️</span>}
+                    {showPass ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
                 <button type="submit" className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-lg hover:opacity-90 transition">

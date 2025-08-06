@@ -235,8 +235,10 @@ export default function AnalyticsPage() {
             </div>
           )}
           {occupancyChartData && (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
-              <Pie data={occupancyChartData} />
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow flex justify-center">
+              <div className="w-64 h-64">
+                <Pie data={occupancyChartData} options={{ maintainAspectRatio: false }} />
+              </div>
             </div>
           )}
         </div>
