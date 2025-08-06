@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../firebase';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
-import { Line } from 'react-chartjs-2';
+import { Line, Bar, Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
+  ArcElement,
   Tooltip,
   Legend,
 } from 'chart.js';
@@ -19,6 +21,8 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
+  ArcElement,
   Tooltip,
   Legend
 );
@@ -35,7 +39,9 @@ export default function AnalyticsPage() {
     pendingRequests: 0,
     rentRate: 0,
   });
-  const [chartData, setChartData] = useState(null);
+  const [rentChartData, setRentChartData] = useState(null);
+  const [expenseChartData, setExpenseChartData] = useState(null);
+  const [occupancyChartData, setOccupancyChartData] = useState(null);
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/signin');
@@ -52,26 +58,36 @@ export default function AnalyticsPage() {
       const propSnap = await getDocs(
         query(collection(db, 'Properties'), where('landlord_id', '==', u.uid))
       );
+      const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       let occupied = 0;
       const tenantSet = new Set();
-      propSnap.forEach((d) => {
-        const data = d.data();
+      const occupancyLabels = [];
+      const occupancyValues = [];
+      props.forEach((data) => {
         const t = data.tenants || [];
         occupied += t.length;
         t.forEach((id) => tenantSet.add(id));
+        occupancyLabels.push(data.name);
+        occupancyValues.push(t.length);
       });
-      const properties = propSnap.size;
+      const properties = props.length;
       const tenants = tenantSet.size;
 
-      // maintenance requests
+      // maintenance requests for pending count and expenses
       const reqSnap = await getDocs(
-        query(
-          collection(db, 'MaintenanceRequests'),
-          where('landlord_id', '==', u.uid),
-          where('status', '==', 'Open')
-        )
+        query(collection(db, 'MaintenanceRequests'), where('landlord_id', '==', u.uid))
       );
-      const pendingRequests = reqSnap.size;
+      let pendingRequests = 0;
+      const expenseMap = {};
+      reqSnap.forEach((d) => {
+        const r = d.data();
+        if (r.status === 'Open') pendingRequests += 1;
+        if (r.status === 'Resolved' && r.expense) {
+          expenseMap[r.property_id] = (expenseMap[r.property_id] || 0) + parseFloat(r.expense);
+        }
+      });
+      const expenseLabels = props.map((p) => p.name);
+      const expenseValues = props.map((p) => expenseMap[p.id] || 0);
 
       // rent payments
       const paySnap = await getDocs(
@@ -105,7 +121,7 @@ export default function AnalyticsPage() {
           year: '2-digit',
         });
       });
-      setChartData({
+      setRentChartData({
         labels,
         datasets: [
           {
@@ -119,6 +135,28 @@ export default function AnalyticsPage() {
             data: keys.map((k) => monthly[k].due),
             borderColor: 'rgb(147,51,234)',
             backgroundColor: 'rgba(147,51,234,0.2)',
+          },
+        ],
+      });
+
+      setExpenseChartData({
+        labels: expenseLabels,
+        datasets: [
+          {
+            label: 'Expenses',
+            data: expenseValues,
+            backgroundColor: 'rgba(147,51,234,0.6)',
+          },
+        ],
+      });
+
+      const colors = ['#6366F1','#10B981','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#F472B6','#34D399'];
+      setOccupancyChartData({
+        labels: occupancyLabels,
+        datasets: [
+          {
+            data: occupancyValues,
+            backgroundColor: colors.slice(0, occupancyValues.length),
           },
         ],
       });
@@ -186,9 +224,19 @@ export default function AnalyticsPage() {
             <MetricCard title="Rent Collection Rate" value={`${metrics.rentRate}%`} />
           </div>
 
-          {chartData && (
+          {expenseChartData && (
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow mb-8">
+              <Bar data={expenseChartData} />
+            </div>
+          )}
+          {rentChartData && (
+            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow mb-8">
+              <Line data={rentChartData} />
+            </div>
+          )}
+          {occupancyChartData && (
             <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
-              <Line data={chartData} />
+              <Pie data={occupancyChartData} />
             </div>
           )}
         </div>

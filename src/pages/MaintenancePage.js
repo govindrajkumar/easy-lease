@@ -28,6 +28,8 @@ export default function MaintenancePage() {
   const [activeReq, setActiveReq] = useState(null);
   const [updateText, setUpdateText] = useState('');
   const [expense, setExpense] = useState('');
+  const [formOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState({ property_id: '', title: '', details: '' });
   const { darkMode } = useTheme();
   const navigate = useNavigate();
 
@@ -47,11 +49,15 @@ export default function MaintenancePage() {
         const data = await Promise.all(
           reqSnap.docs.map(async (d) => {
             const req = d.data();
-            const tSnap = await getDoc(doc(db, 'Users', req.tenant_uid));
+            let tenantName = 'Landlord';
+            if (req.tenant_uid) {
+              const tSnap = await getDoc(doc(db, 'Users', req.tenant_uid));
+              tenantName = tSnap.exists() ? tSnap.data().first_name : 'Unknown';
+            }
             const pSnap = await getDoc(doc(db, 'Properties', req.property_id));
             return {
               id: d.id,
-              tenantName: tSnap.exists() ? tSnap.data().first_name : 'Unknown',
+              tenantName,
               propertyName: pSnap.exists() ? pSnap.data().name : '',
               ...req,
             };
@@ -117,7 +123,7 @@ export default function MaintenancePage() {
     const msg = messageMap[id]?.trim();
     if (!msg) return;
     const req = requests.find((r) => r.id === id);
-    if (!req) return;
+    if (!req || !req.tenant_uid) return;
     await addDoc(collection(db, 'Messages'), {
       from: user.uid,
       to: req.tenant_uid,
@@ -126,6 +132,35 @@ export default function MaintenancePage() {
     });
     setMessageMap((prev) => ({ ...prev, [id]: '' }));
     alert('Message sent');
+  };
+
+  const submitRequest = async (e) => {
+    e.preventDefault();
+    if (!form.property_id || !form.title.trim()) return;
+    const docRef = await addDoc(collection(db, 'MaintenanceRequests'), {
+      title: form.title,
+      details: form.details,
+      landlord_id: user.uid,
+      property_id: form.property_id,
+      status: 'Open',
+      created_at: serverTimestamp(),
+    });
+    const propertyName = properties.find((p) => p.id === form.property_id)?.name || '';
+    setRequests((prev) => [
+      ...prev,
+      {
+        id: docRef.id,
+        title: form.title,
+        details: form.details,
+        landlord_id: user.uid,
+        property_id: form.property_id,
+        status: 'Open',
+        tenantName: 'Landlord',
+        propertyName,
+      },
+    ]);
+    setForm({ property_id: '', title: '', details: '' });
+    setFormOpen(false);
   };
 
   return (
@@ -170,6 +205,12 @@ export default function MaintenancePage() {
 
         <div className="flex-1 p-6 overflow-y-auto space-y-4">
           <div className="flex items-center space-x-4 mb-4">
+            <button
+              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              onClick={() => setFormOpen(true)}
+            >
+              New Request
+            </button>
             <select
               value={filterProp}
               onChange={(e) => setFilterProp(e.target.value)}
@@ -196,36 +237,86 @@ export default function MaintenancePage() {
             .filter((r) => (filterProp ? r.propertyName === filterProp : true))
             .filter((r) => r.status === tab)
             .map((r) => (
-            <div key={r.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow space-y-2 cursor-pointer" onClick={() => {setActiveReq(r); setExpense(r.expense || '');}}>
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium">{r.title}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{r.tenantName} – {r.propertyName}</p>
-                  <p className="text-sm">Status: {r.status}</p>
+              <div
+                key={r.id}
+                className={`${r.status === 'Resolved' ? 'bg-green-100 dark:bg-green-800' : r.status === 'In Progress' ? 'bg-yellow-100 dark:bg-yellow-800' : 'bg-white dark:bg-gray-800'} p-4 rounded-lg shadow space-y-2 cursor-pointer`}
+                onClick={() => {
+                  setActiveReq(r);
+                  setExpense(r.expense || '');
+                }}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium">{r.title}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{r.tenantName} – {r.propertyName}</p>
+                    <p className="text-sm">Status: {r.status}</p>
+                  </div>
+                  <div className="space-x-2">
+                    <button className="px-2 py-1 bg-red-600 text-white rounded" onClick={(e) => {e.stopPropagation(); deleteRequest(r.id);}}>Delete</button>
+                  </div>
                 </div>
-                <div className="space-x-2">
-                  <button className="px-2 py-1 bg-red-600 text-white rounded" onClick={(e) => {e.stopPropagation(); deleteRequest(r.id);}}>Delete</button>
-                </div>
+                {r.tenant_uid && (
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      placeholder="Send message"
+                      value={messageMap[r.id] || ''}
+                      onChange={(e) => setMessageMap({ ...messageMap, [r.id]: e.target.value })}
+                      className="flex-1 border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+                    />
+                    <button className="px-3 py-2 bg-purple-600 text-white rounded" onClick={() => sendMessage(r.id)}>
+                      Send
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  placeholder="Send message"
-                  value={messageMap[r.id] || ''}
-                  onChange={(e) => setMessageMap({ ...messageMap, [r.id]: e.target.value })}
-                  className="flex-1 border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
-                />
-                <button className="px-3 py-2 bg-purple-600 text-white rounded" onClick={() => sendMessage(r.id)}>
-                  Send
-                </button>
-              </div>
-            </div>
-          ))}
+            ))}
           {requests.length === 0 && (
             <p className="text-gray-500 dark:text-gray-400">No maintenance requests.</p>
           )}
         </div>
       </div>
+
+      {formOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <form onSubmit={submitRequest} className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md space-y-4">
+            <h3 className="text-lg font-medium">New Request</h3>
+            <select
+              value={form.property_id}
+              onChange={(e) => setForm({ ...form, property_id: e.target.value })}
+              className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+              required
+            >
+              <option value="">Select Property</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder="Issue summary"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+              required
+            />
+            <textarea
+              placeholder="Details"
+              value={form.details}
+              onChange={(e) => setForm({ ...form, details: e.target.value })}
+              className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+            />
+            <div className="flex justify-end space-x-2">
+              <button type="button" className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 rounded" onClick={() => setFormOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded">
+                Submit
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {activeReq && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setActiveReq(null)}>

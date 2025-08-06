@@ -266,7 +266,7 @@ export default function PropertiesPage() {
                       className="px-6 py-4 text-sm dark:text-gray-100"
                       onClick={() => openDetail(prop)}
                     >
-                      {prop.tenants ? prop.tenants.length : prop.tenant_uid ? 1 : 0}
+                      {Array.isArray(prop.tenants) ? prop.tenants.length : 0}
                     </td>
                     <td className="px-6 py-4 text-sm dark:text-gray-100">
                       <button
