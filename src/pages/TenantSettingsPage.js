@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { updatePassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useTheme } from '../context/ThemeContext';
 
 export default function TenantSettingsPage() {
@@ -14,6 +14,7 @@ export default function TenantSettingsPage() {
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
   const { darkMode, toggleDarkMode } = useTheme();
+  const [unread, setUnread] = useState(0);
 
   const [notifications, setNotifications] = useState({
     email: true,
@@ -54,6 +55,23 @@ export default function TenantSettingsPage() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    let unsubMessages;
+    const unsubAuth = auth.onAuthStateChanged((u) => {
+      if (unsubMessages) unsubMessages();
+      if (u) {
+        const q = query(collection(db, 'Messages'), where('to', '==', u.uid), where('read', '==', false));
+        unsubMessages = onSnapshot(q, (snap) => setUnread(snap.size));
+      } else {
+        setUnread(0);
+      }
+    });
+    return () => {
+      if (unsubMessages) unsubMessages();
+      unsubAuth();
+    };
+  }, []);
+
 
   const saveAll = () => {
     alert('Settings saved');
@@ -92,7 +110,7 @@ export default function TenantSettingsPage() {
         <nav className="flex-1 px-4 space-y-2">
           <a href="/tenant-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📄 Lease Info</a>
           <a href="/tenant-payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments</a>
-          <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
+          <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance{unread > 0 && <span className="ml-2 bg-red-500 text-white rounded-full text-xs px-2">{unread}</span>}</a>
           <a href="/tenant-announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
           <a href="/tenant-settings" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">👤 Profile &amp; Settings</a>
         </nav>
