@@ -2,9 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import ThemeToggle from '../components/ThemeToggle';
-import { auth, db } from "../firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useAuth } from '../context/AuthContext';
 
 export default function SignUp() {
   const [error, setError] = useState(null);
@@ -19,6 +17,7 @@ export default function SignUp() {
     confirm: '',
     phone: '',
   });
+  const { register } = useAuth();
 
 
   const handleChange = (e) => {
@@ -48,34 +47,13 @@ export default function SignUp() {
     }
 
     try {
-      // 1. Create auth user (only once)
-      const cred = await createUserWithEmailAndPassword(
-        auth,
-        form.email,
-        form.password
-      );
-      const uid = cred.user.uid;
-
-      // 2. Save profile doc (only once, using uid)
-      const [first_name, ...rest] = form.name.trim().split(" ");
-      const last_name = rest.join(" ");
-      await setDoc(doc(db, "Users", uid), {
-        first_name: first_name,
-        last_name: last_name,
-        email: form.email,
-        phone: form.phone || "",
-        role: form.role,
-        status: form.role === 'tenant' ? 'Inactive' : 'Active',
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp()
-      });
-
+      await register(form.email, form.password, form.role);
       setSuccess(true);
       setTimeout(() => {
-        navigate("/signin");
+        navigate('/signin');
       }, 1500);
     } catch (e) {
-      setError(e.message);
+      setError(e.response?.data?.message || e.message);
     }
   };
 

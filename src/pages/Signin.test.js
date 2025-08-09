@@ -12,12 +12,14 @@ jest.mock(
   { virtual: true }
 );
 
-// Mock Firebase utilities
-jest.mock('../firebase', () => ({ auth: {}, db: {} }), { virtual: true });
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { getDoc } from 'firebase/firestore';
-jest.mock('firebase/auth', () => ({ signInWithEmailAndPassword: jest.fn() }));
-jest.mock('firebase/firestore', () => ({ doc: jest.fn(), getDoc: jest.fn() }));
+let mockLogin;
+jest.mock(
+  '../context/AuthContext',
+  () => ({
+    useAuth: () => ({ login: mockLogin }),
+  }),
+  { virtual: true }
+);
 
 function renderSignIn() {
   return render(
@@ -28,8 +30,8 @@ function renderSignIn() {
 }
 
 beforeEach(() => {
+  mockLogin = jest.fn();
   jest.clearAllMocks();
-  sessionStorage.clear();
 });
 
 test('password field toggles visibility', async () => {
@@ -46,12 +48,7 @@ test('password field toggles visibility', async () => {
 });
 
 test('landlord sign in navigates to landlord dashboard', async () => {
-  signInWithEmailAndPassword.mockResolvedValue({ user: { uid: '1' } });
-  getDoc.mockResolvedValue({
-    exists: () => true,
-    data: () => ({ role: 'landlord', first_name: 'Larry' }),
-  });
-
+  mockLogin.mockResolvedValue({ role: 'landlord' });
   renderSignIn();
 
   await userEvent.type(screen.getByLabelText(/email address/i), 'a@b.com');
@@ -59,18 +56,11 @@ test('landlord sign in navigates to landlord dashboard', async () => {
   await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
   await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/landlord-dashboard'));
-  expect(signInWithEmailAndPassword).toHaveBeenCalledWith({}, 'a@b.com', 'secret');
-  expect(sessionStorage.getItem('user_email')).toBe('a@b.com');
-  expect(sessionStorage.getItem('user_first_name')).toBe('Larry');
+  expect(mockLogin).toHaveBeenCalledWith('a@b.com', 'secret');
 });
 
 test('tenant sign in navigates to tenant dashboard', async () => {
-  signInWithEmailAndPassword.mockResolvedValue({ user: { uid: '2' } });
-  getDoc.mockResolvedValue({
-    exists: () => true,
-    data: () => ({ role: 'tenant', first_name: 'Tina' }),
-  });
-
+  mockLogin.mockResolvedValue({ role: 'tenant' });
   renderSignIn();
 
   await userEvent.type(screen.getByLabelText(/email address/i), 't@c.com');
@@ -78,8 +68,7 @@ test('tenant sign in navigates to tenant dashboard', async () => {
   await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
   await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/tenant-dashboard'));
-  expect(sessionStorage.getItem('user_email')).toBe('t@c.com');
-  expect(sessionStorage.getItem('user_first_name')).toBe('Tina');
+  expect(mockLogin).toHaveBeenCalledWith('t@c.com', 'secret');
 });
 
 

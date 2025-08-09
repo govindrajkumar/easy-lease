@@ -2,15 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import ThemeToggle from '../components/ThemeToggle';
-import { auth, db } from "../firebase"; // adjust path if needed
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { useAuth } from '../context/AuthContext';
 
 export default function SignIn() {
   const [error, setError] = useState(null);
   const [showPass, setShowPass] = useState(false);
   const [form, setForm] = useState({ email: '', password: '', remember: false });
   const navigate = useNavigate();
+  const { login } = useAuth();
 
 
   const handleChange = (e) => {
@@ -26,31 +25,14 @@ export default function SignIn() {
       setError(null);
   
       try {
-        // 1) Authenticate with Firebase Auth
-        const { user } = await signInWithEmailAndPassword(
-          auth,
-          form.email,
-          form.password
-        );
-  
-        // 2) Fetch user document from Firestore
-        const snap = await getDoc(doc(db, "Users", user.uid));
-        if (!snap.exists()) throw new Error("Profile not found.");
-  
-        const { role, first_name } = snap.data();
-  
-        // 3) Store session variables
-        sessionStorage.setItem("user_email", form.email);
-        sessionStorage.setItem("user_first_name", first_name);
-  
-        // 4) Redirect based on role
-        if (role === "landlord") {
-          navigate("/landlord-dashboard");
+        const user = await login(form.email, form.password);
+        if (user.role === 'landlord') {
+          navigate('/landlord-dashboard');
         } else {
-          navigate("/tenant-dashboard");
+          navigate('/tenant-dashboard');
         }
       } catch (e) {
-        setError(e.message);
+        setError(e.response?.data?.message || e.message);
       }
     };
 
