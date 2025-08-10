@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { auth, db } from '../firebase';
+import { auth, db, storage } from '../firebase';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function TenantDashboard() {
   const navigate = useNavigate();
@@ -101,20 +102,19 @@ export default function TenantDashboard() {
     navigate('/');
   };
 
-  const handleAgreementUpload = (e) => {
+  const handleAgreementUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !lease) return;
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        await updateDoc(doc(db, 'Leases', lease.id), { signed_agreement: reader.result });
-        setLease((prev) => ({ ...prev, signed_agreement: reader.result }));
-        setUploadMessage('Agreement uploaded successfully.');
-      } catch {
-        setUploadMessage('Failed to upload agreement.');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      await updateDoc(doc(db, 'Leases', lease.id), { signed_agreement_url: url });
+      setLease((prev) => ({ ...prev, signed_agreement_url: url }));
+      setUploadMessage('Agreement uploaded successfully.');
+    } catch {
+      setUploadMessage('Failed to upload agreement.');
+    }
   };
 
   const handleRequestSubmit = async (e) => {
@@ -312,9 +312,9 @@ export default function TenantDashboard() {
                 </motion.a>
               <div className="mt-4">
                 {lease ? (
-                  lease.signed_agreement ? (
+                  lease.signed_agreement_url ? (
                     <motion.a
-                      href={lease.signed_agreement}
+                      href={lease.signed_agreement_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-block px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded shadow hover:from-emerald-600 hover:to-green-500"

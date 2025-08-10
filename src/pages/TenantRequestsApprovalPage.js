@@ -217,11 +217,14 @@ export default function TenantRequestsApprovalPage() {
               <option value="" disabled>
                 Select property
               </option>
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.address_line1 || p.name}
-                </option>
-              ))}
+              {properties.map((p) => {
+                const full = (p.tenants || []).length >= 4;
+                return (
+                  <option key={p.id} value={p.id} disabled={full}>
+                    {p.address_line1 || p.name}{full ? ' (Full)' : ''}
+                  </option>
+                );
+              })}
             </select>
             <div className="flex justify-end space-x-2">
               <button
