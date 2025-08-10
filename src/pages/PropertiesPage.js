@@ -653,7 +653,7 @@ export default function PropertiesPage() {
                     .join(', ') || <span className="italic text-gray-400 dark:text-gray-500">No address</span>}
                 </p>
                 <p className="dark:text-gray-200">
-                  <strong>Units:</strong> {currentProp.units || 0}
+                  <strong>Units:</strong> {currentProp.units || 4}
                 </p>
                 <p className="dark:text-gray-200">
                   <strong>Tenants:</strong> {currentProp.tenants ? currentProp.tenants.length : currentProp.tenant_uid ? 1 : 0}
@@ -665,10 +665,10 @@ export default function PropertiesPage() {
                   <p className="dark:text-gray-200 whitespace-pre-line">{currentProp.description}</p>
                 )}
                 {propertyLeases.map((l) => (
-                  l.signed_agreement ? (
+                  l.signed_agreement_url ? (
                     <p key={l.id} className="dark:text-gray-200">
                       <a
-                        href={l.signed_agreement}
+                        href={l.signed_agreement_url}
                         download={`signed_agreement_${l.id}.pdf`}
                         className="text-blue-600 underline"
                       >
