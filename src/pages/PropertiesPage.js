@@ -666,10 +666,11 @@ export default function PropertiesPage() {
                 )}
                 {propertyLeases.map((l) => (
                   l.signed_agreement_url ? (
-                    <p key={l.id} className="dark:text-gray-200">
+                  <p key={l.id} className="dark:text-gray-200">
                       <a
                         href={l.signed_agreement_url}
-                        download={`signed_agreement_${l.id}.pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-blue-600 underline"
                       >
                         Download Signed Agreement
