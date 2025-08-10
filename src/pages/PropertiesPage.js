@@ -5,6 +5,21 @@ import { auth, db, storage } from '../firebase';
 import { doc, getDoc, collection, setDoc, serverTimestamp, getDocs, query, where, deleteDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
+const PROVINCES = [
+  'Alberta',
+  'British Columbia',
+  'Manitoba',
+  'New Brunswick',
+  'Newfoundland and Labrador',
+  'Nova Scotia',
+  'Ontario',
+  'Prince Edward Island',
+  'Quebec',
+  'Saskatchewan',
+  'Northwest Territories',
+  'Nunavut',
+  'Yukon',
+];
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState([]);
@@ -377,7 +392,7 @@ export default function PropertiesPage() {
         {/* Add Property Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg relative">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
               <button
                 className="absolute top-4 right-4 text-gray-500 dark:text-gray-300 text-2xl"
                 onClick={() => setShowAddModal(false)}
@@ -436,13 +451,17 @@ export default function PropertiesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium dark:text-gray-300">Province*</label>
-                  <input
-                    type="text"
+                  <select
                     value={newProperty.province}
                     onChange={e => setNewProperty({ ...newProperty, province: e.target.value })}
                     className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
                     required
-                  />
+                  >
+                    <option value="" disabled>Select province</option>
+                    {PROVINCES.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium dark:text-gray-300">Zip Code*</label>
@@ -496,7 +515,7 @@ export default function PropertiesPage() {
         {/* Edit Property Modal */}
         {showEditModal && editProperty && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg relative">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
               <button
                 className="absolute top-4 right-4 text-gray-500 dark:text-gray-300 text-2xl"
                 onClick={() => setShowEditModal(false)}
@@ -555,13 +574,17 @@ export default function PropertiesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium dark:text-gray-300">Province*</label>
-                  <input
-                    type="text"
+                  <select
                     value={editProperty.province}
                     onChange={(e) => setEditProperty({ ...editProperty, province: e.target.value })}
                     className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
                     required
-                  />
+                  >
+                    <option value="" disabled>Select province</option>
+                    {PROVINCES.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium dark:text-gray-300">Zip Code*</label>

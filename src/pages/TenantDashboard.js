@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { auth, db } from '../firebase';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 
@@ -299,35 +300,44 @@ export default function TenantDashboard() {
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
               <h3 className="text-sm text-gray-500 dark:text-gray-400">Lease Agreement</h3>
-                <a
-                  href="https://forms.mgcs.gov.on.ca/dataset/edff7620-980b-455f-9666-643196d8312f/resource/929691d6-56bf-4d64-8474-0e434bb2d32d/download/2229e.pdf"
-                  className="text-blue-600 dark:text-blue-400 underline mt-2 inline-block"
+                <motion.a
+                  href="https://forms.mgcs.gov.on.ca/dataset/edff7620-980b-455f-9666-643196d8312f/resource/44548947-1727-4928-81df-dfc33ffd649a/download/2229e_flat.pdf"
+                  className="mt-2 inline-block px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded shadow hover:from-purple-600 hover:to-indigo-500"
                   target="_blank"
                   rel="noopener noreferrer"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   Download Standard Lease
-                </a>
+                </motion.a>
               <div className="mt-4">
-                <label className="block text-sm mb-2 dark:text-gray-300">Upload signed agreement</label>
-                <input
-                  type="file"
-                  accept="application/pdf,image/*"
-                  onChange={handleAgreementUpload}
-                  className="text-sm"
-                />
-                {uploadMessage && (
-                  <p className="mt-2 text-green-600 dark:text-green-400">{uploadMessage}</p>
-                )}
-                {lease && lease.signed_agreement && (
-                    <a
+                {lease ? (
+                  lease.signed_agreement ? (
+                    <motion.a
                       href={lease.signed_agreement}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-blue-400 underline mt-2 block"
+                      className="inline-block px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded shadow hover:from-emerald-600 hover:to-green-500"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      View Uploaded Agreement
-                    </a>
-                )}
+                      View Signed Agreement
+                    </motion.a>
+                  ) : (
+                    <>
+                      <label className="block text-sm mb-2 dark:text-gray-300">Upload signed agreement</label>
+                      <input
+                        type="file"
+                        accept="application/pdf,image/*"
+                        onChange={handleAgreementUpload}
+                        className="text-sm"
+                      />
+                      {uploadMessage && (
+                        <p className="mt-2 text-green-600 dark:text-green-400">{uploadMessage}</p>
+                      )}
+                    </>
+                  )
+                ) : null}
               </div>
             </div>
           </main>
