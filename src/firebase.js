@@ -13,7 +13,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDH-9HMnMIMnpP7JT3HwODG1cZRrFTr-Ko",
   authDomain: "easylease-sgaap.firebaseapp.com",
   projectId: "easylease-sgaap",
-  storageBucket: "easylease-sgaap.firebasestorage.app",
+  storageBucket: "easylease-sgaap.appspot.com",
   messagingSenderId: "1097212604433",
   appId: "1:1097212604433:web:b9179f3228068f5d3a01b0",
   measurementId: "G-0HXJV0VGHS"

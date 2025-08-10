@@ -133,6 +133,12 @@ export default function PropertiesPage() {
     setAddSuccess('');
     setAddLoading(true);
 
+    if (!user) {
+      setAddError('You must be logged in to add a property.');
+      setAddLoading(false);
+      return;
+    }
+
     // Basic validation
     if (
       !newProperty.name.trim() ||
@@ -200,6 +206,12 @@ export default function PropertiesPage() {
     if (!editProperty) return;
     setEditError('');
     setEditLoading(true);
+
+    if (!user) {
+      setEditError('You must be logged in to edit a property.');
+      setEditLoading(false);
+      return;
+    }
     try {
       const docRef = doc(db, 'Properties', editProperty.id);
       let photoURL = editProperty.photo || '';
