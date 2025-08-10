@@ -103,7 +103,20 @@ export default function PropertiesPage() {
   };
 
   const openEdit = (prop) => {
-    setEditProperty({ ...prop, photoFile: null });
+    // Ensure all editable fields have default values to avoid sending
+    // `undefined` to Firestore, which rejects such updates.
+    setEditProperty({
+      ...prop,
+      name: prop.name || '',
+      description: prop.description || '',
+      address_line1: prop.address_line1 || '',
+      address_line2: prop.address_line2 || '',
+      city: prop.city || '',
+      province: prop.province || '',
+      zip_code: prop.zip_code || '',
+      photo: prop.photo || '',
+      photoFile: null,
+    });
     setEditError('');
     setShowEditModal(true);
   };
@@ -221,13 +234,15 @@ export default function PropertiesPage() {
         photoURL = await getDownloadURL(imageRef);
       }
       await updateDoc(docRef, {
-        name: editProperty.name,
-        description: editProperty.description,
-        address_line1: editProperty.address_line1,
-        address_line2: editProperty.address_line2,
-        city: editProperty.city,
-        province: editProperty.province,
-        zip_code: editProperty.zip_code,
+        // Use default empty strings for any missing fields so Firestore
+        // doesn't receive undefined values and reject the update.
+        name: editProperty.name ?? '',
+        description: editProperty.description ?? '',
+        address_line1: editProperty.address_line1 ?? '',
+        address_line2: editProperty.address_line2 ?? '',
+        city: editProperty.city ?? '',
+        province: editProperty.province ?? '',
+        zip_code: editProperty.zip_code ?? '',
         photo: photoURL,
         updated_at: serverTimestamp(),
       });
