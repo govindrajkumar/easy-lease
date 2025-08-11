@@ -198,7 +198,7 @@ export default function LandlordDashboard() {
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
       {/* Header */}
-      <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800 relative">
+      <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800">
         <div className="w-full flex items-center justify-between px-2 md:px-4 lg:px-6 py-4 max-w-none">
           <h1
             className="text-2xl font-bold cursor-pointer"
@@ -223,10 +223,10 @@ export default function LandlordDashboard() {
         </div>
       </header>
 
-      <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
+      <div className="flex flex-1">
         {/* Sidebar (Desktop) */}
-        <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-[calc(100vh-5rem)] justify-between">
-          <nav className="px-4 space-y-2 mt-4">
+        <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg pt-20">
+          <nav className="flex-1 px-4 space-y-2">
             <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">🏠 Dashboard</a>
             <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
             <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative">
@@ -262,7 +262,7 @@ export default function LandlordDashboard() {
         </aside>
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
-          <main className="flex-1 p-6 overflow-y-auto space-y-8">
+          <main className="flex-1 p-6 overflow-y-auto space-y-8 pt-24">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Rent Collected */}
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
