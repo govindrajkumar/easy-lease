@@ -206,7 +206,7 @@ export default function LandlordDashboard() {
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
       {/* Header */}
-      <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800">
+      <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800 relative">
         <div className="w-full flex items-center justify-between px-2 md:px-4 lg:px-6 py-4 max-w-none">
           <h1
             className="text-2xl font-bold cursor-pointer"
@@ -247,37 +247,37 @@ export default function LandlordDashboard() {
             </svg>
           </button>
         </div>
+        {/* Mobile Menu */}
+        {mobileMenu && (
+          <div className="absolute top-full left-0 w-full bg-white dark:bg-gray-800 shadow-md md:hidden">
+            <nav className="px-4 py-2 space-y-2">
+              {navItems.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={`flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                    item.active ? 'bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200' : ''
+                  } relative`}
+                  onClick={() => setMobileMenu(false)}
+                >
+                  <span className="text-xl mr-3">{item.icon}</span>
+                  {item.label}
+                  {item.label === 'Maintenance' && newRequests > 0 && (
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
+                      {newRequests}
+                    </span>
+                  )}
+                  {item.label === 'Tenants' && pendingTenants > 0 && (
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
+                      {pendingTenants}
+                    </span>
+                  )}
+                </a>
+              ))}
+            </nav>
+          </div>
+        )}
       </header>
-
-      {/* Mobile Menu */}
-      {mobileMenu && (
-        <div className="absolute top-full left-0 w-full bg-white dark:bg-gray-800 shadow-md md:hidden">
-          <nav className="px-4 py-2 space-y-2">
-            {navItems.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className={`flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                  item.active ? 'bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200' : ''
-                } relative`}
-              >
-                <span className="text-xl mr-3">{item.icon}</span>
-                {item.label}
-                {item.label === 'Maintenance' && newRequests > 0 && (
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
-                    {newRequests}
-                  </span>
-                )}
-                {item.label === 'Tenants' && pendingTenants > 0 && (
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
-                    {pendingTenants}
-                  </span>
-                )}
-              </a>
-            ))}
-          </nav>
-        </div>
-      )}
 
       <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
         {/* Sidebar (Desktop) */}
