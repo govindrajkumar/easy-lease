@@ -4,6 +4,7 @@ import { updatePassword } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useTheme } from '../context/ThemeContext';
 import MobileNav from '../components/MobileNav';
+import { tenantNavItems } from '../constants/navItems';
 
 export default function TenantSettingsPage() {
   const [tab, setTab] = useState('profile');
@@ -107,13 +108,7 @@ export default function TenantSettingsPage() {
     await auth.signOut();
   };
 
-  const navItems = [
-    { icon: '📄', label: 'Lease Info', href: '/tenant-dashboard' },
-    { icon: '💳', label: 'Payments', href: '/tenant-payments' },
-    { icon: '🛠️', label: 'Maintenance', href: '/tenant-maintenance', badge: unread },
-    { icon: '🔔', label: 'Announcements', href: '/tenant-announcements' },
-    { icon: '👤', label: 'Profile & Settings', href: '/tenant-settings', active: true },
-  ];
+  const navItems = tenantNavItems({ active: 'settings', unread });
 
   return (
     <div className="min-h-screen antialiased bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 flex flex-col">

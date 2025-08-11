@@ -16,6 +16,8 @@ import {
   arrayUnion,
   Timestamp
 } from 'firebase/firestore';
+import MobileNav from '../components/MobileNav';
+import { landlordNavItems } from '../constants/navItems';
 
 export default function MaintenancePage() {
   const [requests, setRequests] = useState([]);
@@ -73,6 +75,8 @@ export default function MaintenancePage() {
     await auth.signOut();
     navigate('/signin');
   };
+
+  const navItems = landlordNavItems({ active: 'maintenance' });
 
   const updateStatus = async (id, status, exp) => {
     const data = { status };
@@ -178,6 +182,7 @@ export default function MaintenancePage() {
               Logout
             </button>
           </div>
+          <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
       </header>
 

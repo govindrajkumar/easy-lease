@@ -15,6 +15,8 @@ import {
   arrayUnion,
   arrayRemove,
 } from 'firebase/firestore';
+import MobileNav from '../components/MobileNav';
+import { landlordNavItems } from '../constants/navItems';
 
 export default function TenantsPage() {
   const [tenants, setTenants] = useState([]);
@@ -89,6 +91,8 @@ export default function TenantsPage() {
     await auth.signOut();
     navigate('/signin');
   };
+
+  const navItems = landlordNavItems({ active: 'tenants', pendingTenants: requests.length });
 
   const handleDelete = async (uid) => {
     if (!window.confirm('Delete tenant?')) return;
@@ -195,6 +199,7 @@ export default function TenantsPage() {
               Logout
             </button>
           </div>
+            <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
       </header>
 

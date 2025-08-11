@@ -3,6 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import MobileNav from '../components/MobileNav';
+import { landlordNavItems } from '../constants/navItems';
 import {
   doc,
   getDoc,
@@ -192,16 +193,7 @@ export default function LandlordDashboard() {
     Completed: 'text-green-500 dark:text-green-400',
   };
 
-  const navItems = [
-    { icon: '🏠', label: 'Dashboard', href: '/landlord-dashboard', active: true },
-    { icon: '🏢', label: 'Properties', href: '/properties' },
-    { icon: '👥', label: 'Tenants', href: '/tenants', badge: pendingTenants },
-    { icon: '🔔', label: 'Announcements', href: '/announcements' },
-    { icon: '💳', label: 'Payments', href: '/payments' },
-    { icon: '🛠️', label: 'Maintenance', href: '/maintenance', badge: newRequests },
-    { icon: '📊', label: 'Analytics', href: '/analytics' },
-    { icon: '⚙️', label: 'Settings', href: '/settings' },
-  ];
+  const navItems = landlordNavItems({ active: 'dashboard', pendingTenants, newRequests });
 
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">

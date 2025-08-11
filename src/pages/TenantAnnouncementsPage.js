@@ -22,6 +22,8 @@ export default function TenantAnnouncementsPage() {
   const [unread, setUnread] = useState(0);
   const navigate = useNavigate();
 
+  const navItems = tenantNavItems({ active: 'announcements', unread });
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
       setUser(u);
@@ -103,6 +105,7 @@ export default function TenantAnnouncementsPage() {
               Logout
             </button>
           </div>
+            <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
       </header>
 

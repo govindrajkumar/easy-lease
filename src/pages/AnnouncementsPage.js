@@ -13,6 +13,8 @@ import {
   deleteDoc,
   serverTimestamp
 } from 'firebase/firestore';
+import MobileNav from '../components/MobileNav';
+import { landlordNavItems } from '../constants/navItems';
 
 export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState([]);
@@ -24,6 +26,13 @@ export default function AnnouncementsPage() {
   const [filterProp, setFilterProp] = useState('');
   const { darkMode } = useTheme();
   const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    navigate('/signin');
+  };
+
+  const navItems = landlordNavItems({ active: 'announcements' });
 
   const tenantMap = tenants.reduce((acc, t) => ({ ...acc, [t.id]: t.name }), {});
 
@@ -91,11 +100,12 @@ export default function AnnouncementsPage() {
             {firstName && <span className="font-medium text-white dark:text-gray-100">{firstName}</span>}
             <button
               className="px-6 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:scale-105 transform transition dark:from-gray-700 dark:to-gray-900"
-              onClick={async () => { await auth.signOut(); navigate('/signin'); }}
+              onClick={handleLogout}
             >
               Logout
             </button>
           </div>
+            <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
       </header>
 

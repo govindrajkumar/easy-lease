@@ -15,6 +15,8 @@ import {
   arrayUnion,
   Timestamp,
 } from 'firebase/firestore';
+import MobileNav from '../components/MobileNav';
+import { tenantNavItems } from '../constants/navItems';
 
 export default function TenantMaintenancePage() {
   const [requests, setRequests] = useState([]);
@@ -29,6 +31,8 @@ export default function TenantMaintenancePage() {
   const [form, setForm] = useState({ title: '', details: '' });
   const [unread, setUnread] = useState(0);
   const navigate = useNavigate();
+
+  const navItems = tenantNavItems({ active: 'maintenance', unread });
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
@@ -122,6 +126,7 @@ export default function TenantMaintenancePage() {
               Logout
             </button>
           </div>
+            <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
       </header>
 
