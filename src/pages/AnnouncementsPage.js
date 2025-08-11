@@ -11,7 +11,8 @@ import {
   where,
   addDoc,
   deleteDoc,
-  serverTimestamp
+  serverTimestamp,
+  orderBy
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
 import { landlordNavItems } from '../constants/navItems';
@@ -26,6 +27,8 @@ export default function AnnouncementsPage() {
   const [filterProp, setFilterProp] = useState('');
   const { darkMode } = useTheme();
   const navigate = useNavigate();
+  const [activeId, setActiveId] = useState('');
+  const [messagesMap, setMessagesMap] = useState({});
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -35,6 +38,23 @@ export default function AnnouncementsPage() {
   const navItems = landlordNavItems({ active: 'announcements' });
 
   const tenantMap = tenants.reduce((acc, t) => ({ ...acc, [t.id]: t.name }), {});
+
+  const fetchMessages = async (id) => {
+    const snap = await getDocs(
+      query(collection(db, 'Messages'), where('announcement_id', '==', id), orderBy('created_at'))
+    );
+    const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    setMessagesMap((prev) => ({ ...prev, [id]: msgs }));
+  };
+
+  const toggleAnnouncement = async (id) => {
+    if (activeId === id) {
+      setActiveId('');
+    } else {
+      setActiveId(id);
+      if (!messagesMap[id]) await fetchMessages(id);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
@@ -204,23 +224,50 @@ export default function AnnouncementsPage() {
             {announcements
               .filter((a) => (filterProp ? a.property_id === filterProp : true))
               .map((a) => (
-              <div key={a.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow flex justify-between items-start">
-                <div>
-                  <p className="font-medium">{a.message}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Target:{' '}
-                    {a.target === 'all'
-                      ? 'All tenants'
-                      : a.target === 'property'
-                      ? `Property ${a.property_id}`
-                      : `Tenant ${tenantMap[a.tenant_uid] || a.tenant_uid}`}
-                  </p>
+                <div
+                  key={a.id}
+                  className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow cursor-pointer"
+                  onClick={() => toggleAnnouncement(a.id)}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{a.message}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Target:{' '}
+                        {a.target === 'all'
+                          ? 'All tenants'
+                          : a.target === 'property'
+                          ? `Property ${a.property_id}`
+                          : `Tenant ${tenantMap[a.tenant_uid] || a.tenant_uid}`}
+                      </p>
+                    </div>
+                    <button
+                      className="text-red-500"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(a.id);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  {activeId === a.id && (
+                    <div className="mt-2 border-t pt-2 space-y-1">
+                      {(messagesMap[a.id] || []).map((m) => (
+                        <p key={m.id} className="text-sm">
+                          <span className="font-semibold">
+                            {m.from === user?.uid ? firstName || 'You' : tenantMap[m.from] || m.from}
+                          </span>{' '}
+                          {m.text}
+                        </p>
+                      ))}
+                      {messagesMap[a.id] && messagesMap[a.id].length === 0 && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No conversation yet.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <button className="text-red-500" onClick={() => handleDelete(a.id)}>
-                  Delete
-                </button>
-              </div>
-            ))}
+              ))}
             {announcements.length === 0 && (
               <p className="text-gray-500 dark:text-gray-400">No announcements yet.</p>
             )}
