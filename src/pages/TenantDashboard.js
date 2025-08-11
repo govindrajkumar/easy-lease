@@ -12,6 +12,7 @@ export default function TenantDashboard() {
   const [landlordEmail, setLandlordEmail] = useState('');
   const [requestSent, setRequestSent] = useState(false);
   const [sendingRequest, setSendingRequest] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
 
   const [property, setProperty] = useState(null);
   const [lease, setLease] = useState(null);
@@ -20,6 +21,14 @@ export default function TenantDashboard() {
 
   const userFirstName = sessionStorage.getItem('user_first_name');
   const userEmail = sessionStorage.getItem('user_email');
+
+  const navItems = [
+    { icon: '📄', label: 'Lease Info', href: '/tenant-dashboard', active: true },
+    { icon: '💳', label: 'Payments', href: '/tenant-payments' },
+    { icon: '🛠️', label: 'Maintenance', href: '/tenant-maintenance', badge: unread },
+    { icon: '🔔', label: 'Announcements', href: '/tenant-announcements' },
+    { icon: '👤', label: 'Profile & Settings', href: '/tenant-settings' },
+  ];
 
   useEffect(() => {
     const fetchUserStatus = async () => {
@@ -154,22 +163,57 @@ export default function TenantDashboard() {
   }
 
   const Header = () => (
-    <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800">
-      <div className="w-full flex items-center justify-between px-2 md:px-4 lg:px-6 py-4 max-w-none">
-        <h1 className="text-2xl font-bold cursor-pointer" onClick={() => navigate('/')}>EasyLease</h1>
-        <div className="hidden md:flex items-center space-x-6">
-          {userFirstName && (
-            <span className="font-medium text-white dark:text-gray-100">{userFirstName}</span>
-          )}
-          <button
-            className="px-6 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:scale-105 transform transition dark:from-gray-700 dark:to-gray-900"
-            onClick={handleLogout}
-          >
-            Logout
+      <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800 relative">
+        <div className="w-full flex items-center justify-between px-2 md:px-4 lg:px-6 py-4 max-w-none">
+          <h1 className="text-2xl font-bold cursor-pointer" onClick={() => navigate('/')}>EasyLease</h1>
+          <div className="hidden md:flex items-center space-x-6">
+            {userFirstName && (
+              <span className="font-medium text-white dark:text-gray-100">{userFirstName}</span>
+            )}
+            <button
+              className="px-6 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:scale-105 transform transition dark:from-gray-700 dark:to-gray-900"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+          </div>
+          <button className="md:hidden" onClick={() => setMobileMenu(!mobileMenu)}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
           </button>
         </div>
-      </div>
-    </header>
+        {mobileMenu && (
+          <div className="absolute top-full left-0 w-full bg-white dark:bg-gray-800 shadow-md md:hidden">
+            <nav className="px-4 py-2 space-y-2">
+              {navItems.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={`flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                    item.active ? 'bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200' : ''
+                  } relative`}
+                  onClick={() => setMobileMenu(false)}
+                >
+                  <span className="text-xl mr-3">{item.icon}</span>
+                  {item.label}
+                  {item.badge > 0 && (
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
+                      {item.badge}
+                    </span>
+                  )}
+                </a>
+              ))}
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                🚪 Logout
+              </button>
+            </nav>
+          </div>
+        )}
+      </header>
   );
 
   if (status === 'Inactive') {
@@ -230,24 +274,7 @@ export default function TenantDashboard() {
 
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
-      <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800">
-        <div className="w-full flex items-center justify-between px-2 md:px-4 lg:px-6 py-4 max-w-none">
-          <h1 className="text-2xl font-bold cursor-pointer" onClick={() => navigate('/')}>
-            EasyLease
-          </h1>
-          <div className="hidden md:flex items-center space-x-6">
-            {userFirstName && (
-              <span className="font-medium text-white dark:text-gray-100">{userFirstName}</span>
-            )}
-            <button
-              className="px-6 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:scale-105 transform transition dark:from-gray-700 dark:to-gray-900"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
         <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-[calc(100vh-5rem)] justify-between">

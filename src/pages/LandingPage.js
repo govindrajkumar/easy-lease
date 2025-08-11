@@ -87,10 +87,10 @@ function LandingPage() {
                 </a>
               ))}
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <Link to="/signin" className="w-full text-left py-2 mb-2" onClick={() => setMobileMenu(false)}>
+                  <Link to="/signin" className="block w-full text-left py-2 mb-2" onClick={() => setMobileMenu(false)}>
                     Login
                   </Link>
-                  <Link to="/signup" className="w-full text-left py-2" onClick={() => setMobileMenu(false)}>
+                  <Link to="/signup" className="block w-full text-left py-2" onClick={() => setMobileMenu(false)}>
                     Sign Up
                   </Link>
                 </div>
