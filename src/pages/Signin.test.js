@@ -82,4 +82,27 @@ test('tenant sign in navigates to tenant dashboard', async () => {
   expect(sessionStorage.getItem('user_first_name')).toBe('Tina');
 });
 
+test('shows error for invalid email format', async () => {
+  renderSignIn();
+
+  await userEvent.type(screen.getByLabelText(/email address/i), 'invalid');
+  await userEvent.type(screen.getByLabelText(/^Password$/i), 'secret');
+  await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
+
+  expect(await screen.findByText(/invalid email address/i)).toBeInTheDocument();
+  expect(signInWithEmailAndPassword).not.toHaveBeenCalled();
+});
+
+test('shows error when password is incorrect', async () => {
+  signInWithEmailAndPassword.mockRejectedValue({ code: 'auth/wrong-password' });
+
+  renderSignIn();
+
+  await userEvent.type(screen.getByLabelText(/email address/i), 'a@b.com');
+  await userEvent.type(screen.getByLabelText(/^Password$/i), 'wrong');
+  await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
+
+  expect(await screen.findByText(/incorrect password/i)).toBeInTheDocument();
+});
+
 

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
+import MobileNav from '../components/MobileNav';
+import { tenantNavItems } from '../constants/navItems';
 import {
   collection,
   query,
