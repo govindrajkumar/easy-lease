@@ -157,7 +157,7 @@ export default function TenantDashboard() {
   }
 
   const Header = () => (
-      <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800 relative">
+      <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800">
         <div className="w-full flex items-center justify-between px-2 md:px-4 lg:px-6 py-4 max-w-none">
           <h1 className="text-2xl font-bold cursor-pointer" onClick={() => navigate('/')}>EasyLease</h1>
           <div className="hidden md:flex items-center space-x-6">
@@ -232,33 +232,33 @@ export default function TenantDashboard() {
 
 
 
-  return (
-    <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
-      <Header />
+    return (
+      <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
+        <Header />
 
-      <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
-        <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-[calc(100vh-5rem)] justify-between">
-          <nav className="px-4 space-y-2 mt-4">
-            <a href="/tenant-dashboard" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">📄 Lease Info</a>
-            <a href="/tenant-payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments</a>
-            <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance{unread > 0 && <span className="ml-2 bg-red-500 text-white rounded-full text-xs px-2">{unread}</span>}</a>
-            <a href="/tenant-announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
-            <a href="/tenant-settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👤 Profile &amp; Settings</a>
-          </nav>
-          <div className="px-6 py-4 border-t dark:border-gray-700">
-            <div className="flex items-center space-x-3">
-              <span className="text-xl">👤</span>
-              <div>
-                <div className="font-medium dark:text-gray-100">{userFirstName || "User"}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">{userEmail || ""}</div>
+        <div className="flex flex-1">
+          <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg pt-20">
+            <nav className="flex-1 px-4 space-y-2">
+              <a href="/tenant-dashboard" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">📄 Lease Info</a>
+              <a href="/tenant-payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments</a>
+              <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance{unread > 0 && <span className="ml-2 bg-red-500 text-white rounded-full text-xs px-2">{unread}</span>}</a>
+              <a href="/tenant-announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
+              <a href="/tenant-settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👤 Profile &amp; Settings</a>
+            </nav>
+            <div className="px-6 py-4 border-t dark:border-gray-700">
+              <div className="flex items-center space-x-3">
+                <span className="text-xl">👤</span>
+                <div>
+                  <div className="font-medium dark:text-gray-100">{userFirstName || "User"}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{userEmail || ""}</div>
+                </div>
               </div>
             </div>
-          </div>
-        </aside>
+          </aside>
 
-        <div className="flex-1 flex flex-col">
-          <main className="flex-1 p-6 overflow-y-auto space-y-8">
-            {/* Render main dashboard (Active tenant) */}
+          <div className="flex-1 flex flex-col">
+            <main className="flex-1 p-6 overflow-y-auto space-y-8 pt-24">
+              {/* Render main dashboard (Active tenant) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                 <h3 className="text-sm text-gray-500 dark:text-gray-400">Property</h3>
