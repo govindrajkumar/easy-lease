@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { auth, db, storage } from '../firebase';
+import MobileNav from '../components/MobileNav';
+import { tenantNavItems } from '../constants/navItems';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -12,8 +14,6 @@ export default function TenantDashboard() {
   const [landlordEmail, setLandlordEmail] = useState('');
   const [requestSent, setRequestSent] = useState(false);
   const [sendingRequest, setSendingRequest] = useState(false);
-  const [mobileMenu, setMobileMenu] = useState(false);
-
   const [property, setProperty] = useState(null);
   const [lease, setLease] = useState(null);
   const [uploadMessage, setUploadMessage] = useState('');
@@ -22,13 +22,7 @@ export default function TenantDashboard() {
   const userFirstName = sessionStorage.getItem('user_first_name');
   const userEmail = sessionStorage.getItem('user_email');
 
-  const navItems = [
-    { icon: '📄', label: 'Lease Info', href: '/tenant-dashboard', active: true },
-    { icon: '💳', label: 'Payments', href: '/tenant-payments' },
-    { icon: '🛠️', label: 'Maintenance', href: '/tenant-maintenance', badge: unread },
-    { icon: '🔔', label: 'Announcements', href: '/tenant-announcements' },
-    { icon: '👤', label: 'Profile & Settings', href: '/tenant-settings' },
-  ];
+  const navItems = tenantNavItems({ active: 'dashboard', unread });
 
   useEffect(() => {
     const fetchUserStatus = async () => {
@@ -177,43 +171,9 @@ export default function TenantDashboard() {
               Logout
             </button>
           </div>
-          <button className="md:hidden" onClick={() => setMobileMenu(!mobileMenu)}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
-        {mobileMenu && (
-          <div className="absolute top-full left-0 w-full bg-white dark:bg-gray-800 shadow-md md:hidden">
-            <nav className="px-4 py-2 space-y-2">
-              {navItems.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className={`flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                    item.active ? 'bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200' : ''
-                  } relative`}
-                  onClick={() => setMobileMenu(false)}
-                >
-                  <span className="text-xl mr-3">{item.icon}</span>
-                  {item.label}
-                  {item.badge > 0 && (
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
-                      {item.badge}
-                    </span>
-                  )}
-                </a>
-              ))}
-              <button
-                onClick={handleLogout}
-                className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                🚪 Logout
-              </button>
-            </nav>
-          </div>
-        )}
-      </header>
+          <MobileNav navItems={navItems} handleLogout={handleLogout} />
+      </div>
+    </header>
   );
 
   if (status === 'Inactive') {

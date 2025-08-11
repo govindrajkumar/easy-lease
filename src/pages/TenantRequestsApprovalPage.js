@@ -14,6 +14,8 @@ import {
   serverTimestamp,
   arrayUnion,
 } from 'firebase/firestore';
+import MobileNav from '../components/MobileNav';
+import { landlordNavItems } from '../constants/navItems';
 
 export default function TenantRequestsApprovalPage() {
   const [requests, setRequests] = useState([]);
@@ -140,6 +142,8 @@ export default function TenantRequestsApprovalPage() {
     navigate('/signin');
   };
 
+  const navItems = landlordNavItems({ active: 'tenants', pendingTenants: requests.length });
+
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
       {/* Header */}
@@ -160,6 +164,7 @@ export default function TenantRequestsApprovalPage() {
               Logout
             </button>
           </div>
+            <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
       </header>
 

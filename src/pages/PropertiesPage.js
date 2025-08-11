@@ -5,6 +5,7 @@ import { auth, db, storage } from '../firebase';
 import { doc, getDoc, collection, setDoc, serverTimestamp, getDocs, query, where, deleteDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import MobileNav from '../components/MobileNav';
+import { landlordNavItems } from '../constants/navItems';
 
 const PROVINCES = [
   'Alberta',
@@ -104,16 +105,7 @@ export default function PropertiesPage() {
     navigate('/signin');
   };
 
-  const navItems = [
-    { icon: '🏠', label: 'Dashboard', href: '/landlord-dashboard' },
-    { icon: '🏢', label: 'Properties', href: '/properties', active: true },
-    { icon: '👥', label: 'Tenants', href: '/tenants' },
-    { icon: '🔔', label: 'Announcements', href: '/announcements' },
-    { icon: '💳', label: 'Payments', href: '/payments' },
-    { icon: '🛠️', label: 'Maintenance', href: '/maintenance' },
-    { icon: '📊', label: 'Analytics', href: '/analytics' },
-    { icon: '⚙️', label: 'Settings', href: '/settings' },
-  ];
+  const navItems = landlordNavItems({ active: 'properties' });
 
   const openDetail = async (prop) => {
     setCurrentProp(prop);

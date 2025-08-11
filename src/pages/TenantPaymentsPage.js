@@ -12,6 +12,8 @@ import {
   serverTimestamp,
   onSnapshot,
 } from 'firebase/firestore';
+import MobileNav from '../components/MobileNav';
+import { tenantNavItems } from '../constants/navItems';
 
 export default function TenantPaymentsPage() {
   const [payments, setPayments] = useState([]);
@@ -23,6 +25,8 @@ export default function TenantPaymentsPage() {
   const [ccInfo, setCcInfo] = useState({ number: '', expiry: '', cvc: '' });
   const [unread, setUnread] = useState(0);
   const navigate = useNavigate();
+
+  const navItems = tenantNavItems({ active: 'payments', unread });
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
@@ -136,6 +140,7 @@ export default function TenantPaymentsPage() {
               Logout
             </button>
           </div>
+            <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
       </header>
 

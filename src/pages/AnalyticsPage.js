@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../firebase';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import MobileNav from '../components/MobileNav';
+import { landlordNavItems } from '../constants/navItems';
 import { Line, Bar, Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -46,6 +48,8 @@ export default function AnalyticsPage() {
     await auth.signOut();
     navigate('/signin');
   };
+
+  const navItems = landlordNavItems({ active: 'analytics' });
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
@@ -188,6 +192,7 @@ export default function AnalyticsPage() {
               Logout
             </button>
           </div>
+          <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
       </header>
 

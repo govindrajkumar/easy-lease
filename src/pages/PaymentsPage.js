@@ -13,6 +13,8 @@ import {
   serverTimestamp,
   addDoc,
 } from 'firebase/firestore';
+import MobileNav from '../components/MobileNav';
+import { landlordNavItems } from '../constants/navItems';
 
 export default function PaymentsPage() {
   const [firstName, setFirstName] = useState('');
@@ -86,6 +88,8 @@ export default function PaymentsPage() {
     navigate('/signin');
   };
 
+  const navItems = landlordNavItems({ active: 'payments' });
+
   const markPaid = async (id) => {
     await updateDoc(doc(db, 'RentPayments', id), {
       paid: true,
@@ -124,6 +128,7 @@ export default function PaymentsPage() {
               Logout
             </button>
           </div>
+            <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
       </header>
 
