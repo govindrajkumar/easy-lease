@@ -8,7 +8,6 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "chart.js": "^4.5.0",
-    "easy-lease": "file:",
     "firebase": "^11.9.1",
     "framer-motion": "^12.19.2",
     "react": "^19.1.0",
