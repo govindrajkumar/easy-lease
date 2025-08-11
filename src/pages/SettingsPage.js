@@ -3,6 +3,7 @@ import { auth, db } from '../firebase';
 import { updatePassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useTheme } from '../context/ThemeContext';
+import MobileNav from '../components/MobileNav';
 
 export default function SettingsPage() {
   const [tab, setTab] = useState('profile');
@@ -84,35 +85,25 @@ export default function SettingsPage() {
       alert('Failed to update password');
     }
   };
+  const handleLogout = async () => {
+    await auth.signOut();
+  };
+
+  const navItems = [
+    { icon: '🏠', label: 'Dashboard', href: '/landlord-dashboard' },
+    { icon: '🏢', label: 'Properties', href: '/properties' },
+    { icon: '👥', label: 'Tenants', href: '/tenants' },
+    { icon: '🔔', label: 'Announcements', href: '/announcements' },
+    { icon: '💳', label: 'Payments', href: '/payments' },
+    { icon: '🛠️', label: 'Maintenance', href: '/maintenance' },
+    { icon: '📊', label: 'Analytics', href: '/analytics' },
+    { icon: '⚙️', label: 'Settings', href: '/settings', active: true },
+  ];
 
   return (
-    <div className="antialiased bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 flex h-screen overflow-hidden">
-      {/* Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg pt-20 flex-shrink-0">
-        <nav className="flex-1 px-4 space-y-2">
-          <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏠 Dashboard</a>
-          <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
-          <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
-          <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
-          <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
-          <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
-          <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📊 Analytics</a>
-          <a href="/settings" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">⚙️ Settings</a>
-        </nav>
-        <div className="px-6 py-4 border-t dark:border-gray-700">
-          <div className="flex items-center space-x-3">
-            <span className="text-xl">👤</span>
-            <div>
-              <div className="font-medium dark:text-gray-100">{firstName || 'User'}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">{user?.email || ''}</div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-6 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen antialiased bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 flex flex-col">
+      <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800">
+        <div className="w-full flex items-center justify-between px-4 py-4">
           <div className="text-2xl font-bold">EasyLease</div>
           <div className="hidden md:flex items-center space-x-6">
             {firstName && <span className="font-medium text-white dark:text-gray-100">{firstName}</span>}
@@ -123,10 +114,36 @@ export default function SettingsPage() {
               Save All Changes
             </button>
           </div>
-        </header>
+          <MobileNav navItems={navItems} handleLogout={handleLogout} />
+        </div>
+      </header>
+
+      <div className="flex flex-1 pt-20">
+        {/* Sidebar */}
+        <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg justify-between">
+          <nav className="px-4 space-y-2 mt-4">
+            <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏠 Dashboard</a>
+            <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
+            <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
+            <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
+            <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
+            <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
+            <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📊 Analytics</a>
+            <a href="/settings" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">⚙️ Settings</a>
+          </nav>
+          <div className="px-6 py-4 border-t dark:border-gray-700">
+            <div className="flex items-center space-x-3">
+              <span className="text-xl">👤</span>
+              <div>
+                <div className="font-medium dark:text-gray-100">{firstName || 'User'}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{user?.email || ''}</div>
+              </div>
+            </div>
+          </div>
+        </aside>
 
         {/* Content */}
-        <main className="pt-24 p-6 mx-6 overflow-auto">
+        <main className="flex-1 p-6 overflow-auto mx-auto max-w-4xl">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
 
             {/* Tabs */}

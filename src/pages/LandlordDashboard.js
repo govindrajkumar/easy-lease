@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
+import MobileNav from '../components/MobileNav';
 import {
   doc,
   getDoc,
@@ -11,19 +12,7 @@ import {
   where,
 } from 'firebase/firestore';
 
-const navItems = [
-  { icon: '🏠', label: 'Dashboard', href: '/landlord-dashboard', active: true },
-  { icon: '🏢', label: 'Properties', href: '/properties' },
-  { icon: '👥', label: 'Tenants', href: '/tenants' },
-  { icon: '🔔', label: 'Announcements', href: '/announcements' },
-  { icon: '💳', label: 'Payments', href: '/payments' },
-  { icon: '🛠️', label: 'Maintenance', href: '/maintenance' },
-  { icon: '📊', label: 'Analytics', href: '/analytics' },
-  { icon: '⚙️', label: 'Settings', href: '/settings' },
-];
-
 export default function LandlordDashboard() {
-  const [mobileMenu, setMobileMenu] = useState(false);
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [totalRequests, setTotalRequests] = useState(0);
@@ -203,6 +192,17 @@ export default function LandlordDashboard() {
     Completed: 'text-green-500 dark:text-green-400',
   };
 
+  const navItems = [
+    { icon: '🏠', label: 'Dashboard', href: '/landlord-dashboard', active: true },
+    { icon: '🏢', label: 'Properties', href: '/properties' },
+    { icon: '👥', label: 'Tenants', href: '/tenants', badge: pendingTenants },
+    { icon: '🔔', label: 'Announcements', href: '/announcements' },
+    { icon: '💳', label: 'Payments', href: '/payments' },
+    { icon: '🛠️', label: 'Maintenance', href: '/maintenance', badge: newRequests },
+    { icon: '📊', label: 'Analytics', href: '/analytics' },
+    { icon: '⚙️', label: 'Settings', href: '/settings' },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
       {/* Header */}
@@ -227,56 +227,8 @@ export default function LandlordDashboard() {
               Logout
             </button>
           </div>
-          <button
-            className="md:hidden"
-            onClick={() => setMobileMenu(!mobileMenu)}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </button>
+          <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
-        {/* Mobile Menu */}
-        {mobileMenu && (
-          <div className="absolute top-full left-0 w-full bg-white dark:bg-gray-800 shadow-md md:hidden">
-            <nav className="px-4 py-2 space-y-2">
-              {navItems.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className={`flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                    item.active ? 'bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200' : ''
-                  } relative`}
-                  onClick={() => setMobileMenu(false)}
-                >
-                  <span className="text-xl mr-3">{item.icon}</span>
-                  {item.label}
-                  {item.label === 'Maintenance' && newRequests > 0 && (
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
-                      {newRequests}
-                    </span>
-                  )}
-                  {item.label === 'Tenants' && pendingTenants > 0 && (
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
-                      {pendingTenants}
-                    </span>
-                  )}
-                </a>
-              ))}
-            </nav>
-          </div>
-        )}
       </header>
 
       <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
