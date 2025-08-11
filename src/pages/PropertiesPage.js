@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { auth, db, storage } from '../firebase';
 import { doc, getDoc, collection, setDoc, serverTimestamp, getDocs, query, where, deleteDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import MobileNav from '../components/MobileNav';
 
 const PROVINCES = [
   'Alberta',
@@ -102,6 +103,17 @@ export default function PropertiesPage() {
     await auth.signOut();
     navigate('/signin');
   };
+
+  const navItems = [
+    { icon: '🏠', label: 'Dashboard', href: '/landlord-dashboard' },
+    { icon: '🏢', label: 'Properties', href: '/properties', active: true },
+    { icon: '👥', label: 'Tenants', href: '/tenants' },
+    { icon: '🔔', label: 'Announcements', href: '/announcements' },
+    { icon: '💳', label: 'Payments', href: '/payments' },
+    { icon: '🛠️', label: 'Maintenance', href: '/maintenance' },
+    { icon: '📊', label: 'Analytics', href: '/analytics' },
+    { icon: '⚙️', label: 'Settings', href: '/settings' },
+  ];
 
   const openDetail = async (prop) => {
     setCurrentProp(prop);
@@ -340,6 +352,7 @@ export default function PropertiesPage() {
               Logout
             </button>
           </div>
+          <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </header>
 
         {/* Properties Table */}
