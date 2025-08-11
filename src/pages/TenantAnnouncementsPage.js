@@ -13,6 +13,7 @@ import {
   addDoc,
   serverTimestamp,
   onSnapshot,
+  orderBy,
 } from 'firebase/firestore';
 
 export default function TenantAnnouncementsPage() {
@@ -22,6 +23,9 @@ export default function TenantAnnouncementsPage() {
   const [user, setUser] = useState(null);
   const [property, setProperty] = useState(null);
   const [unread, setUnread] = useState(0);
+  const [landlordName, setLandlordName] = useState('');
+  const [activeId, setActiveId] = useState('');
+  const [messagesMap, setMessagesMap] = useState({});
   const navigate = useNavigate();
 
   const navItems = tenantNavItems({ active: 'announcements', unread });
@@ -40,6 +44,8 @@ export default function TenantAnnouncementsPage() {
           const propDoc = propSnap.docs[0];
           const prop = { id: propDoc.id, ...propDoc.data() };
           setProperty(prop);
+          const lSnap = await getDoc(doc(db, 'Users', prop.landlord_id));
+          if (lSnap.exists()) setLandlordName(lSnap.data().first_name || '');
           const annSnap = await getDocs(query(collection(db, 'Announcements'), where('landlord_id', '==', prop.landlord_id)));
           const data = annSnap.docs
             .map((d) => ({ id: d.id, ...d.data() }))
@@ -90,7 +96,25 @@ export default function TenantAnnouncementsPage() {
       created_at: serverTimestamp(),
     });
     setReplyMap({ ...replyMap, [id]: '' });
+    await fetchMessages(id);
     alert('Reply sent');
+  };
+
+  const fetchMessages = async (id) => {
+    const snap = await getDocs(
+      query(collection(db, 'Messages'), where('announcement_id', '==', id), orderBy('created_at'))
+    );
+    const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    setMessagesMap((prev) => ({ ...prev, [id]: msgs }));
+  };
+
+  const toggleAnnouncement = async (id) => {
+    if (activeId === id) {
+      setActiveId('');
+    } else {
+      setActiveId(id);
+      if (!messagesMap[id]) await fetchMessages(id);
+    }
   };
 
   return (
@@ -133,21 +157,48 @@ export default function TenantAnnouncementsPage() {
 
         <div className="flex-1 p-6 overflow-y-auto space-y-4">
           {announcements.map((a, idx) => (
-            <div key={a.id} className={`bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-xl transition ${idx === 0 ? 'border-2 border-purple-600' : ''}`}>
+            <div
+              key={a.id}
+              onClick={() => toggleAnnouncement(a.id)}
+              className={`bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-xl transition cursor-pointer ${idx === 0 ? 'border-2 border-purple-600' : ''}`}
+            >
               <p className="font-medium">{a.message}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{a.created_at?.seconds ? new Date(a.created_at.seconds * 1000).toLocaleString() : ''}</p>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  placeholder="Reply"
-                  value={replyMap[a.id] || ''}
-                  onChange={(e) => setReplyMap({ ...replyMap, [a.id]: e.target.value })}
-                  className="flex-1 border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
-                />
-                <button className="px-3 py-2 bg-purple-600 text-white rounded" onClick={() => sendReply(a.id)}>
-                  Send
-                </button>
-              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {a.created_at?.seconds ? new Date(a.created_at.seconds * 1000).toLocaleString() : ''}
+              </p>
+              {activeId === a.id && (
+                <div className="mt-2 space-y-2">
+                  {(messagesMap[a.id] || []).map((m) => (
+                    <p key={m.id} className="text-sm">
+                      <span className="font-semibold">
+                        {m.from === user?.uid ? firstName || 'You' : landlordName || 'Landlord'}
+                      </span>{' '}
+                      {m.text}
+                    </p>
+                  ))}
+                  {messagesMap[a.id] && messagesMap[a.id].length === 0 && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No conversation yet.</p>
+                  )}
+                  <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      placeholder="Reply"
+                      value={replyMap[a.id] || ''}
+                      onChange={(e) => setReplyMap({ ...replyMap, [a.id]: e.target.value })}
+                      className="flex-1 border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+                    />
+                    <button
+                      className="px-3 py-2 bg-purple-600 text-white rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sendReply(a.id);
+                      }}
+                    >
+                      Send
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
           {announcements.length === 0 && (
