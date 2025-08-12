@@ -43,6 +43,8 @@ export default function AnalyticsPage() {
   const [rentChartData, setRentChartData] = useState(null);
   const [expenseChartData, setExpenseChartData] = useState(null);
   const [occupancyChartData, setOccupancyChartData] = useState(null);
+  const [rentMonthly, setRentMonthly] = useState({});
+  const [monthFilter, setMonthFilter] = useState('');
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/signin');
@@ -101,7 +103,7 @@ export default function AnalyticsPage() {
         const p = d.data();
         const amt = parseFloat(p.amount);
         const date = new Date(p.due_date);
-        const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         if (!monthly[key]) monthly[key] = { collected: 0, due: 0 };
         if (p.paid) {
           collected += amt;
@@ -111,34 +113,7 @@ export default function AnalyticsPage() {
         }
         monthly[key].due += amt;
       });
-      const rentRate = collected + due > 0 ? (collected / (collected + due)) * 100 : 0;
-      const keys = Object.keys(monthly).sort(
-        (a, b) => new Date(`${a}-01`) - new Date(`${b}-01`)
-      );
-      const labels = keys.map((k) => {
-        const [y, m] = k.split('-');
-        return new Date(y, m - 1).toLocaleString('default', {
-          month: 'short',
-          year: '2-digit',
-        });
-      });
-      setRentChartData({
-        labels,
-        datasets: [
-          {
-            label: 'Collected',
-            data: keys.map((k) => monthly[k].collected),
-            borderColor: 'rgb(34,197,94)',
-            backgroundColor: 'rgba(34,197,94,0.2)',
-          },
-          {
-            label: 'Total Due',
-            data: keys.map((k) => monthly[k].due),
-            borderColor: 'rgb(147,51,234)',
-            backgroundColor: 'rgba(147,51,234,0.2)',
-          },
-        ],
-      });
+      setRentMonthly(monthly);
 
       setExpenseChartData({
         labels: expenseLabels,
@@ -166,11 +141,56 @@ export default function AnalyticsPage() {
         properties,
         tenants,
         pendingRequests,
-        rentRate: Number(rentRate.toFixed(1)),
+        rentRate: 0,
       });
     });
     return () => unsub();
   }, []);
+
+  // Update rent chart and rent rate when monthly data or filter changes
+  useEffect(() => {
+    const keys = Object.keys(rentMonthly).sort(
+      (a, b) => new Date(`${a}-01`) - new Date(`${b}-01`)
+    );
+    const filtered = monthFilter ? keys.filter((k) => k === monthFilter) : keys;
+    if (filtered.length) {
+      const labels = filtered.map((k) => {
+        const [y, m] = k.split('-');
+        return new Date(y, m - 1).toLocaleString('default', {
+          month: 'short',
+          year: '2-digit',
+        });
+      });
+      setRentChartData({
+        labels,
+        datasets: [
+          {
+            label: 'Collected',
+            data: filtered.map((k) => rentMonthly[k].collected),
+            borderColor: 'rgb(34,197,94)',
+            backgroundColor: 'rgba(34,197,94,0.2)',
+          },
+          {
+            label: 'Total Due',
+            data: filtered.map((k) => rentMonthly[k].due),
+            borderColor: 'rgb(147,51,234)',
+            backgroundColor: 'rgba(147,51,234,0.2)',
+          },
+        ],
+      });
+      let collected = 0;
+      let due = 0;
+      filtered.forEach((k) => {
+        collected += rentMonthly[k].collected;
+        due += rentMonthly[k].due;
+      });
+      const rate = collected + due > 0 ? (collected / (collected + due)) * 100 : 0;
+      setMetrics((m) => ({ ...m, rentRate: Number(rate.toFixed(1)) }));
+    } else {
+      setRentChartData(null);
+      setMetrics((m) => ({ ...m, rentRate: 0 }));
+    }
+  }, [rentMonthly, monthFilter]);
 
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
@@ -217,6 +237,15 @@ export default function AnalyticsPage() {
 
         <div className="flex-1 p-6 overflow-y-auto">
           <h2 className="text-2xl font-bold mb-8">Analytics</h2>
+          <div className="mb-6">
+            <label className="mr-2">Filter by month:</label>
+            <input
+              type="month"
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              className="border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
+            />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <MetricCard title="Properties" value={metrics.properties} />
             <MetricCard title="Active Tenants" value={metrics.tenants} />
