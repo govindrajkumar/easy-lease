@@ -42,9 +42,11 @@ export default function AnnouncementsPage() {
 
   const fetchMessages = async (id) => {
     const snap = await getDocs(
-      query(collection(db, 'Messages'), where('announcement_id', '==', id), orderBy('created_at'))
+      query(collection(db, 'Messages'), where('announcement_id', '==', id))
     );
-    const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const msgs = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0));
     setMessagesMap((prev) => ({ ...prev, [id]: msgs }));
   };
 
