@@ -37,6 +37,9 @@ export default function TenantsPage() {
     endDate: '',
     deposit: '',
   });
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTenant, setEditTenant] = useState(null);
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', email: '' });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -172,6 +175,37 @@ export default function TenantsPage() {
     }
   };
 
+  const openEditModal = (tenant) => {
+    setEditTenant(tenant);
+    setEditForm({
+      first_name: tenant.first_name || '',
+      last_name: tenant.last_name || '',
+      email: tenant.email || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateTenant = async () => {
+    if (!editTenant) return;
+    try {
+      await updateDoc(doc(db, 'Users', editTenant.id), {
+        first_name: editForm.first_name,
+        last_name: editForm.last_name,
+        email: editForm.email,
+      });
+      setTenants((prev) =>
+        prev.map((t) =>
+          t.id === editTenant.id
+            ? { ...t, first_name: editForm.first_name, last_name: editForm.last_name, email: editForm.email }
+            : t
+        )
+      );
+      setShowEditModal(false);
+    } catch (e) {
+      console.error('Failed to update tenant', e);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
       <header className="bg-gradient-to-tr from-purple-700 to-blue-500 text-white fixed w-full z-30 dark:from-gray-900 dark:to-gray-800">
@@ -253,12 +287,20 @@ export default function TenantsPage() {
                   <h3 className="text-lg font-medium dark:text-gray-100">{t.first_name} {t.last_name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{t.email}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Property: {t.propertyName}</p>
-                  <button
-                    className="mt-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-                    onClick={() => handleDelete(t.id)}
-                  >
-                    Delete
-                  </button>
+                  <div className="mt-2 flex space-x-2">
+                    <button
+                      className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      onClick={() => openEditModal(t)}
+                    >
+                      Modify
+                    </button>
+                    <button
+                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                      onClick={() => handleDelete(t.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -385,6 +427,48 @@ export default function TenantsPage() {
               <button
                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                 onClick={handleSaveLease}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md space-y-4">
+            <h3 className="text-lg font-semibold dark:text-gray-100">Modify Tenant</h3>
+            <input
+              type="text"
+              placeholder="First Name"
+              className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100"
+              value={editForm.first_name}
+              onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+            />
+            <input
+              type="text"
+              placeholder="Last Name"
+              className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100"
+              value={editForm.last_name}
+              onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100"
+              value={editForm.email}
+              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 rounded"
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                onClick={handleUpdateTenant}
               >
                 Save
               </button>
