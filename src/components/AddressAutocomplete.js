@@ -2,6 +2,12 @@ import React, { useEffect, useRef } from 'react';
 
 export default function AddressAutocomplete({ value, onChange, onSelect }) {
   const inputRef = useRef(null);
+  // Keep a mutable ref to the latest onSelect to avoid re-initialising
+  const onSelectRef = useRef(onSelect);
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
 
   useEffect(() => {
     let autocomplete;
@@ -27,7 +33,7 @@ export default function AddressAutocomplete({ value, onChange, onSelect }) {
         const city = get('locality');
         const province = get('administrative_area_level_1');
         const zip = get('postal_code');
-        onSelect({
+        onSelectRef.current({
           address_line1: line1,
           city,
           province,
@@ -57,7 +63,7 @@ export default function AddressAutocomplete({ value, onChange, onSelect }) {
         window.google.maps.event.clearInstanceListeners(autocomplete);
       }
     };
-  }, [onSelect]);
+  }, []);
 
   return (
     <input
