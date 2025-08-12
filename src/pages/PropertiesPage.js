@@ -553,12 +553,12 @@ export default function PropertiesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium dark:text-gray-300">Address Line 1*</label>
-                  <input
-                    type="text"
+                  <AddressAutocomplete
                     value={editProperty.address_line1}
-                    onChange={(e) => setEditProperty({ ...editProperty, address_line1: e.target.value })}
-                    className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
-                    required
+                    onChange={(val) => setEditProperty({ ...editProperty, address_line1: val })}
+                    onSelect={(addr) =>
+                      setEditProperty((prev) => ({ ...prev, ...addr }))
+                    }
                   />
                 </div>
                 <div>
