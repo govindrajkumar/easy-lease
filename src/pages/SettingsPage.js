@@ -143,7 +143,7 @@ export default function SettingsPage() {
               {['profile','notifications','integrations'].map(key => (
                 <button key={key}
                         onClick={() => setTab(key)}
-                        className={`border-b-2 pb-2 font-medium ${tab === key ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-600'}`}
+                        className={`border-b-2 pb-2 font-medium ${tab === key ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-600 dark:text-gray-300'}`}
                 >
                   {key === 'profile' ? 'Profile & Account' : key === 'notifications' ? 'Notification Preferences' : 'Integrations'}
                 </button>
@@ -155,7 +155,7 @@ export default function SettingsPage() {
               <section className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
                     <input
                       type="text"
                       value={profile.name}
@@ -164,7 +164,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Email Address</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
                     <input
                       type="email"
                       value={profile.email}
@@ -173,7 +173,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">New Password</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
                     <input
                       type="password"
                       value={profile.password}
@@ -190,7 +190,7 @@ export default function SettingsPage() {
                     </button>
                   </div>
                   <div className="flex items-center space-x-2 mt-4">
-                    <span className="text-sm text-gray-700">Dark Mode</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Dark Mode</span>
                     <button
                       type="button"
                       onClick={toggleDarkMode}
@@ -210,7 +210,7 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   {Object.entries(notifications).map(([key, enabled]) => (
                     <div key={key} className="flex items-center justify-between">
-                      <span className="capitalize text-gray-700">{labels[key]}</span>
+                      <span className="capitalize text-gray-700 dark:text-gray-300">{labels[key]}</span>
                       <button onClick={() => toggleNotification(key)}
                               className={`relative inline-flex h-6 w-11 items-center rounded-full ${enabled ? 'bg-purple-500' : 'bg-gray-300'}`}
                       >
@@ -228,16 +228,20 @@ export default function SettingsPage() {
               <section className="p-6">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-700">Stripe</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">Stripe</span>
                     <button onClick={toggleStripe}
-                            className={`px-4 py-2 rounded-full text-sm ${integrations.stripe.connected ? 'bg-gray-200 text-gray-700' : 'bg-purple-600 text-white'}`}
+                            className={`px-4 py-2 rounded-full text-sm ${
+                              integrations.stripe.connected
+                                ? 'bg-gray-200 text-gray-700 dark:text-gray-900'
+                                : 'bg-purple-600 text-white'
+                            }`}
                     >
                       {integrations.stripe.connected ? 'Connected' : 'Connect'}
                     </button>
                   </div>
                   {['email','sms'].map(key => (
                     <div key={key} className="flex items-center justify-between">
-                      <span className="font-medium text-gray-700">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">
                         {key === 'email' ? 'Email Service' : 'SMS Service'}
                       </span>
                       <button onClick={() => toggleIntegration(key)}

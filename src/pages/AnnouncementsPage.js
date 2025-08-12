@@ -29,6 +29,7 @@ export default function AnnouncementsPage() {
   const navigate = useNavigate();
   const [activeId, setActiveId] = useState('');
   const [messagesMap, setMessagesMap] = useState({});
+  const [replyMap, setReplyMap] = useState({});
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -54,6 +55,34 @@ export default function AnnouncementsPage() {
       setActiveId(id);
       if (!messagesMap[id]) await fetchMessages(id);
     }
+  };
+
+  const sendReply = async (id) => {
+    const text = replyMap[id]?.trim();
+    const ann = announcements.find((a) => a.id === id);
+    if (!user || !ann || !text) return;
+    let recipients = [];
+    if (ann.target === 'tenant' && ann.tenant_uid) {
+      recipients = [ann.tenant_uid];
+    } else if (ann.target === 'property') {
+      recipients = tenants.filter((t) => t.propertyId === ann.property_id).map((t) => t.id);
+    } else {
+      recipients = tenants.map((t) => t.id);
+    }
+    await Promise.all(
+      recipients.map((rid) =>
+        addDoc(collection(db, 'Messages'), {
+          from: user.uid,
+          to: rid,
+          text,
+          announcement_id: id,
+          created_at: serverTimestamp(),
+        })
+      )
+    );
+    setReplyMap((prev) => ({ ...prev, [id]: '' }));
+    await fetchMessages(id);
+    alert('Reply sent');
   };
 
   useEffect(() => {
@@ -252,7 +281,7 @@ export default function AnnouncementsPage() {
                     </button>
                   </div>
                   {activeId === a.id && (
-                    <div className="mt-2 border-t pt-2 space-y-1">
+                    <div className="mt-2 border-t pt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
                       {(messagesMap[a.id] || []).map((m) => (
                         <p key={m.id} className="text-sm">
                           <span className="font-semibold">
@@ -264,6 +293,21 @@ export default function AnnouncementsPage() {
                       {messagesMap[a.id] && messagesMap[a.id].length === 0 && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">No conversation yet.</p>
                       )}
+                      <div className="flex space-x-2">
+                        <input
+                          type="text"
+                          value={replyMap[a.id] || ''}
+                          onChange={(e) => setReplyMap({ ...replyMap, [a.id]: e.target.value })}
+                          className="flex-1 border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+                          placeholder="Reply"
+                        />
+                        <button
+                          className="px-3 py-2 bg-purple-600 text-white rounded"
+                          onClick={() => sendReply(a.id)}
+                        >
+                          Send
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
