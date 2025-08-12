@@ -91,11 +91,11 @@ function LandingPage() {
         />
         {/* Sidebar */}
         <nav
-          className={`fixed top-0 left-0 z-50 h-full w-64 transform transition-transform duration-300 md:hidden ${
+          className={`fixed top-0 left-0 z-50 h-full w-72 transform transition-transform duration-300 md:hidden ${
             mobileMenu ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <div className="h-full w-full bg-gradient-to-b from-indigo-600 to-purple-700 text-white dark:bg-gray-900 dark:text-gray-100 shadow-xl flex flex-col">
+          <div className="h-full w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xl flex flex-col">
             <div className="px-6 py-4 border-b border-white/10 dark:border-gray-700 flex items-center justify-between">
               <span className="text-lg font-semibold">Menu</span>
               <button
@@ -238,8 +238,8 @@ function LandingPage() {
         <div className="container mx-auto px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-bold mb-12">What Our Customers Say</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonialsData.map((t, i) => ( 
-              <blockquote key={i} className="relative bg-white dark:bg-gray-900 p-10 rounded-2xl shadow-lg before:content-[''] before:absolute before:-top-8 before:left-8 before:text-7xl before:text-indigo-100 animate-pulse">
+            {testimonialsData.map((t) => (
+              <blockquote key={t.name} className="relative bg-white dark:bg-gray-900 p-10 rounded-2xl shadow-lg before:content-[''] before:absolute before:-top-8 before:left-8 before:text-7xl before:text-indigo-100 animate-pulse">
                 <p className="italic mb-6 text-lg text-gray-700 dark:text-gray-300">"{t.quote}"</p>
                 <footer className="font-semibold text-right text-base text-gray-900 dark:text-gray-100">{t.name}, Landlord</footer>
               </blockquote>
