@@ -7,8 +7,14 @@ export default function AddressAutocomplete({ value, onChange, onSelect }) {
     let autocomplete;
     const initAutocomplete = () => {
       if (!window.google || !window.google.maps || !inputRef.current) return;
+      // Google Places Autocomplete requires explicitly specifying the fields
+      // you want returned when using `getPlace`. Without this, `place.address_components`
+      // will be undefined in recent versions of the API, which breaks our logic
+      // for extracting the street/city/province information.
       autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
         types: ['address'],
+        // Request the address components so we can parse the selected place.
+        fields: ['address_components'],
       });
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
