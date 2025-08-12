@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import { act } from 'react';
 import userEvent from '@testing-library/user-event';
 import SignIn from './Signin';
 import { ThemeProvider } from '../context/ThemeContext';
@@ -14,9 +15,12 @@ jest.mock(
 
 // Mock Firebase utilities
 jest.mock('../firebase', () => ({ auth: {}, db: {} }), { virtual: true });
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { getDoc } from 'firebase/firestore';
-jest.mock('firebase/auth', () => ({ signInWithEmailAndPassword: jest.fn() }));
+jest.mock('firebase/auth', () => ({
+  signInWithEmailAndPassword: jest.fn(),
+  sendPasswordResetEmail: jest.fn(() => Promise.resolve()),
+}));
 jest.mock('firebase/firestore', () => ({ doc: jest.fn(), getDoc: jest.fn() }));
 
 function renderSignIn() {
@@ -103,6 +107,18 @@ test('shows error when password is incorrect', async () => {
   await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
   expect(await screen.findByText(/incorrect password/i)).toBeInTheDocument();
+});
+
+test('sends password reset email', async () => {
+  renderSignIn();
+
+  await userEvent.type(screen.getByLabelText(/email address/i), 'a@b.com');
+  await act(async () => {
+    await userEvent.click(screen.getByRole('button', { name: /forgot password\?/i }));
+  });
+
+  await waitFor(() => expect(sendPasswordResetEmail).toHaveBeenCalledWith({}, 'a@b.com'));
+  expect(await screen.findByText(/password reset email sent/i)).toBeInTheDocument();
 });
 
 

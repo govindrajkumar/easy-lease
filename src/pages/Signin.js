@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import ThemeToggle from '../components/ThemeToggle';
 import { auth, db } from "../firebase"; // adjust path if needed
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function SignIn() {
   const [errors, setErrors] = useState({});
   const [showPass, setShowPass] = useState(false);
+  const [resetMsg, setResetMsg] = useState('');
   const [form, setForm] = useState({ email: '', password: '', remember: false });
   const navigate = useNavigate();
 
@@ -19,6 +20,7 @@ export default function SignIn() {
       [name]: type === 'checkbox' ? checked : value,
     }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
+    setResetMsg('');
   };
 
   const handleSubmit = async (e) => {
@@ -62,6 +64,23 @@ export default function SignIn() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    setResetMsg('');
+    setErrors({});
+    if (!form.email) {
+      setErrors({ email: 'Email is required' });
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, form.email);
+      setResetMsg('Password reset email sent.');
+    } catch (e) {
+      if (e.code === 'auth/invalid-email') setErrors({ email: 'Invalid email address' });
+      else if (e.code === 'auth/user-not-found') setErrors({ email: 'Email not found' });
+      else setErrors({ general: e.message });
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <header className="bg-white dark:bg-gray-800 shadow-md fixed w-full z-10">
@@ -82,6 +101,7 @@ export default function SignIn() {
             Sign In
           </h2>
           {errors.general && <p className="text-sm text-red-600 mb-4">{errors.general}</p>}
+          {resetMsg && <p className="text-sm text-green-600 mb-4">{resetMsg}</p>}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium">Email address</label>
@@ -138,9 +158,18 @@ export default function SignIn() {
                 />
                 <span className="ml-2 text-sm">Remember me</span>
               </label>
-              <a href="/signup" className="text-sm text-indigo-600 hover:underline">
-                Sign Up
-              </a>
+              <div className="flex space-x-4">
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  className="text-sm text-indigo-600 hover:underline"
+                >
+                  Forgot password?
+                </button>
+                <a href="/signup" className="text-sm text-indigo-600 hover:underline">
+                  Sign Up
+                </a>
+              </div>
             </div>
             <button
               type="submit"
