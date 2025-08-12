@@ -91,7 +91,7 @@ function LandingPage() {
         />
         {/* Sidebar */}
         <nav
-          className={`fixed top-0 left-0 z-50 h-full w-64 bg-white dark:bg-gray-900 shadow-xl transform transition-transform duration-300 md:hidden ${
+          className={`fixed top-0 left-0 z-50 h-full w-64 bg-gradient-to-b from-indigo-600 to-purple-700 text-white dark:bg-gray-900 dark:text-gray-100 shadow-xl transform transition-transform duration-300 md:hidden ${
             mobileMenu ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
