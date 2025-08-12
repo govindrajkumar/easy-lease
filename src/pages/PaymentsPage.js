@@ -217,8 +217,9 @@ export default function PaymentsPage() {
                           </button>
                         )}
                         <button
-                          className="px-2 py-1 bg-gray-200 rounded"
+                          className={`px-2 py-1 rounded ${p.paid ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                           onClick={() => sendReminder(p)}
+                          disabled={p.paid}
                         >
                           Reminder
                         </button>

@@ -245,7 +245,7 @@ export default function MaintenancePage() {
             .map((r) => (
               <div
                 key={r.id}
-                className={`${r.status === 'Resolved' ? 'bg-green-100 dark:bg-green-800' : r.status === 'In Progress' ? 'bg-yellow-100 dark:bg-yellow-800' : 'bg-white dark:bg-gray-800'} p-4 rounded-lg shadow space-y-2 cursor-pointer`}
+                className={`${r.status === 'Resolved' ? 'bg-green-100 dark:bg-green-800' : r.status === 'In Progress' ? 'bg-yellow-100 dark:bg-yellow-800' : 'bg-blue-100 dark:bg-blue-800'} p-4 rounded-lg shadow space-y-2 cursor-pointer`}
                 onClick={() => {
                   setActiveReq(r);
                   setExpense(r.expense || '');

@@ -59,11 +59,33 @@ export default function TenantsPage() {
           for (const tid of tList) {
             const tSnap = await getDoc(doc(db, 'Users', tid));
             if (tSnap.exists()) {
-              tenantData.push({ id: tid, propertyName: p.name, ...tSnap.data() });
+              let signedAgreementUrl = '';
+              try {
+                const leaseSnap = await getDocs(
+                  query(
+                    collection(db, 'Leases'),
+                    where('tenant_uid', '==', tid),
+                    where('property_id', '==', p.id)
+                  )
+                );
+                if (!leaseSnap.empty) {
+                  signedAgreementUrl =
+                    leaseSnap.docs[0].data().signed_agreement_url || '';
+                }
+              } catch {
+                signedAgreementUrl = '';
+              }
+              tenantData.push({
+                id: tid,
+                propertyName: p.name,
+                propertyId: p.id,
+                signedAgreementUrl,
+                ...tSnap.data(),
+              });
             }
           }
         }
-        
+
         setTenants(tenantData.filter(Boolean));
 
         const reqQuery = query(
@@ -114,6 +136,20 @@ export default function TenantsPage() {
       setTenants((prev) => prev.filter((t) => t.id !== uid));
     } catch (e) {
       console.error('Failed to delete tenant', e);
+    }
+  };
+
+  const sendAgreementReminder = async (tenant) => {
+    try {
+      await addDoc(collection(db, 'AgreementReminders'), {
+        tenant_uid: tenant.id,
+        property_id: tenant.propertyId,
+        landlord_uid: user.uid,
+        created_at: serverTimestamp(),
+      });
+      alert('Reminder sent');
+    } catch (e) {
+      console.error('Failed to send reminder', e);
     }
   };
 
@@ -288,6 +324,14 @@ export default function TenantsPage() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">{t.email}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Property: {t.propertyName}</p>
                   <div className="mt-2 flex space-x-2">
+                    {!t.signedAgreementUrl && (
+                      <button
+                        className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                        onClick={() => sendAgreementReminder(t)}
+                      >
+                        Agreement Reminder
+                      </button>
+                    )}
                     <button
                       className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                       onClick={() => openEditModal(t)}

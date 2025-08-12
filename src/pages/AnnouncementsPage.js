@@ -39,6 +39,10 @@ export default function AnnouncementsPage() {
   const navItems = landlordNavItems({ active: 'announcements' });
 
   const tenantMap = tenants.reduce((acc, t) => ({ ...acc, [t.id]: t.name }), {});
+  const propertyMap = properties.reduce(
+    (acc, p) => ({ ...acc, [p.id]: p.address_line1 }),
+    {}
+  );
 
   const fetchMessages = async (id) => {
     const snap = await getDocs(
@@ -268,7 +272,7 @@ export default function AnnouncementsPage() {
                         {a.target === 'all'
                           ? 'All tenants'
                           : a.target === 'property'
-                          ? `Property ${a.property_id}`
+                          ? propertyMap[a.property_id] || a.property_id
                           : `Tenant ${tenantMap[a.tenant_uid] || a.tenant_uid}`}
                       </p>
                     </div>
