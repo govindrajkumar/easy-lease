@@ -6,6 +6,7 @@ import { doc, getDoc, collection, setDoc, serverTimestamp, getDocs, query, where
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import MobileNav from '../components/MobileNav';
 import { landlordNavItems } from '../constants/navItems';
+import AddressAutocomplete from '../components/AddressAutocomplete';
 
 const PROVINCES = [
   'Alberta',
@@ -427,12 +428,14 @@ export default function PropertiesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium dark:text-gray-300">Address Line 1*</label>
-                  <input
-                    type="text"
+                  <AddressAutocomplete
                     value={newProperty.address_line1}
-                    onChange={e => setNewProperty({ ...newProperty, address_line1: e.target.value })}
-                    className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
-                    required
+                    onChange={(val) =>
+                      setNewProperty({ ...newProperty, address_line1: val })
+                    }
+                    onSelect={(addr) =>
+                      setNewProperty((prev) => ({ ...prev, ...addr }))
+                    }
                   />
                 </div>
                 <div>

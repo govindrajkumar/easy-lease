@@ -36,7 +36,6 @@ export default function AnalyticsPage() {
   const [firstName, setFirstName] = useState('');
   const [metrics, setMetrics] = useState({
     properties: 0,
-    occupied: 0,
     tenants: 0,
     pendingRequests: 0,
     rentRate: 0,
@@ -63,13 +62,11 @@ export default function AnalyticsPage() {
         query(collection(db, 'Properties'), where('landlord_id', '==', u.uid))
       );
       const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      let occupied = 0;
       const tenantSet = new Set();
       const occupancyLabels = [];
       const occupancyValues = [];
       props.forEach((data) => {
         const t = data.tenants || [];
-        occupied += t.length;
         t.forEach((id) => tenantSet.add(id));
         occupancyLabels.push(data.name);
         occupancyValues.push(t.length);
@@ -167,7 +164,6 @@ export default function AnalyticsPage() {
 
       setMetrics({
         properties,
-        occupied,
         tenants,
         pendingRequests,
         rentRate: Number(rentRate.toFixed(1)),
@@ -221,9 +217,8 @@ export default function AnalyticsPage() {
 
         <div className="flex-1 p-6 overflow-y-auto">
           <h2 className="text-2xl font-bold mb-8">Analytics</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <MetricCard title="Properties" value={metrics.properties} />
-            <MetricCard title="Occupied Units" value={metrics.occupied} />
             <MetricCard title="Active Tenants" value={metrics.tenants} />
             <MetricCard title="Pending Requests" value={metrics.pendingRequests} />
             <MetricCard title="Rent Collection Rate" value={`${metrics.rentRate}%`} />
