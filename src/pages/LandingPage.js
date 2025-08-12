@@ -91,39 +91,41 @@ function LandingPage() {
         />
         {/* Sidebar */}
         <nav
-          className={`fixed top-0 left-0 z-50 h-full w-64 bg-gradient-to-b from-indigo-600 to-purple-700 text-white dark:bg-gray-900 dark:text-gray-100 shadow-xl transform transition-transform duration-300 md:hidden ${
+          className={`fixed top-0 left-0 z-50 h-full w-64 transform transition-transform duration-300 md:hidden ${
             mobileMenu ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
-            <span className="text-lg font-semibold">Menu</span>
-            <button
-              onClick={() => setMobileMenu(false)}
-              className="p-2"
-              aria-label="Close menu"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-          </div>
-          <div className="flex flex-col p-6 space-y-3 text-lg">
-            {Object.keys(sections).map(key => (
-              <a key={key} href={`#${key}`} className="py-2" onClick={() => setMobileMenu(false)}>
-                {key.charAt(0).toUpperCase() + key.slice(1)}
-              </a>
-            ))}
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <Link to="/signin" className="block w-full text-left py-2 mb-2" onClick={() => setMobileMenu(false)}>
-                Login
-              </Link>
-              <Link to="/signup" className="block w-full text-left py-2" onClick={() => setMobileMenu(false)}>
-                Sign Up
-              </Link>
+          <div className="h-full w-full bg-gradient-to-b from-indigo-600 to-purple-700 text-white dark:bg-gray-900 dark:text-gray-100 shadow-xl flex flex-col">
+            <div className="px-6 py-4 border-b border-white/10 dark:border-gray-700 flex items-center justify-between">
+              <span className="text-lg font-semibold">Menu</span>
+              <button
+                onClick={() => setMobileMenu(false)}
+                className="p-2"
+                aria-label="Close menu"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 flex flex-col p-6 space-y-3 text-lg overflow-y-auto">
+              {Object.keys(sections).map(key => (
+                <a key={key} href={`#${key}`} className="py-2" onClick={() => setMobileMenu(false)}>
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                </a>
+              ))}
+              <div className="pt-4 border-t border-white/10 dark:border-gray-700">
+                <Link to="/signin" className="block w-full text-left py-2 mb-2" onClick={() => setMobileMenu(false)}>
+                  Login
+                </Link>
+                <Link to="/signup" className="block w-full text-left py-2" onClick={() => setMobileMenu(false)}>
+                  Sign Up
+                </Link>
+              </div>
             </div>
           </div>
         </nav>
