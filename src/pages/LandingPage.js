@@ -82,20 +82,21 @@ function LandingPage() {
             </svg>
           </button>
         </div>
-        {/* Overlay */}
-        <div
-          className={`fixed inset-0 z-40 bg-black/50 transition-opacity md:hidden ${
-            mobileMenu ? 'opacity-100' : 'pointer-events-none opacity-0'
-          }`}
-          onClick={() => setMobileMenu(false)}
-        />
-        {/* Sidebar */}
-        <nav
-          className={`fixed top-0 left-0 z-50 h-full w-72 transform transition-transform duration-300 md:hidden ${
-            mobileMenu ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
-          <div className="h-full w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xl flex flex-col">
+      </header>
+      {/* Overlay */}
+      <div
+        className={`fixed inset-0 z-50 bg-black/50 transition-opacity md:hidden ${
+          mobileMenu ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        onClick={() => setMobileMenu(false)}
+      />
+      {/* Sidebar */}
+      <nav
+        className={`fixed top-0 left-0 z-[60] h-full w-72 transform transition-transform duration-300 md:hidden ${
+          mobileMenu ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="h-full w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xl flex flex-col">
             <div className="px-6 py-4 border-b border-white/10 dark:border-gray-700 flex items-center justify-between">
               <span className="text-lg font-semibold">Menu</span>
               <button
@@ -128,8 +129,7 @@ function LandingPage() {
               </div>
             </div>
           </div>
-        </nav>
-      </header>
+      </nav>
 
       {/* Hero */}
       <section id="home" ref={sections.home} className="pt-32 pb-24 bg-gradient-to-br from-indigo-600 to-purple-600 text-white">
