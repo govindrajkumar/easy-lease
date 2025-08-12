@@ -175,7 +175,7 @@ export default function TenantSettingsPage() {
                       type="text"
                       value={profile.name}
                       onChange={e => setProfile({ ...profile, name: e.target.value })}
-                      className="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                      className="mt-1 block w-full rounded-lg shadow-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                     />
                   </div>
                   <div>
@@ -184,7 +184,7 @@ export default function TenantSettingsPage() {
                       type="email"
                       value={profile.email}
                       onChange={e => setProfile({ ...profile, email: e.target.value })}
-                      className="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                      className="mt-1 block w-full rounded-lg shadow-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                     />
                   </div>
                   <div>
@@ -194,7 +194,7 @@ export default function TenantSettingsPage() {
                       value={profile.password}
                       onChange={e => setProfile({ ...profile, password: e.target.value })}
                       placeholder="••••••••"
-                      className="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                      className="mt-1 block w-full rounded-lg shadow-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                     />
                     <button
                       type="button"
