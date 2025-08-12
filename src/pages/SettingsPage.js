@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { updatePassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useTheme } from '../context/ThemeContext';
 import MobileNav from '../components/MobileNav';
 import { landlordNavItems } from '../constants/navItems';
+import ProfileModal from '../components/ProfileModal';
 
 export default function SettingsPage() {
   const [tab, setTab] = useState('profile');
   const [profile, setProfile] = useState({
     name: '',
-    email: '',
-    password: ''
+    email: ''
   });
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
   const { darkMode, toggleDarkMode } = useTheme();
+  const [showModal, setShowModal] = useState(false);
 
   const [notifications, setNotifications] = useState({
     email: true,
@@ -76,14 +77,19 @@ export default function SettingsPage() {
     setIntegrations(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handlePasswordChange = async () => {
-    if (!profile.password.trim()) return;
+  const handleProfileSave = async ({ name, password }) => {
     try {
-      await updatePassword(auth.currentUser, profile.password);
-      alert('Password updated');
-      setProfile(prev => ({ ...prev, password: '' }));
+      if (name !== profile.name) {
+        await updateDoc(doc(db, 'Users', auth.currentUser.uid), { first_name: name });
+        setProfile(prev => ({ ...prev, name }));
+        setFirstName(name);
+      }
+      if (password) {
+        await updatePassword(auth.currentUser, password);
+      }
+      alert('Profile updated');
     } catch (e) {
-      alert('Failed to update password');
+      alert('Failed to update profile');
     }
   };
   const handleLogout = async () => {
@@ -156,50 +162,30 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
-                    <input
-                      type="text"
-                      value={profile.name}
-                      onChange={e => setProfile({ ...profile, name: e.target.value })}
-                      className="mt-1 block w-full rounded-lg shadow-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-                    />
+                    <p className="mt-1 text-gray-900 dark:text-gray-100">{profile.name}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
-                    <input
-                      type="email"
-                      value={profile.email}
-                      onChange={e => setProfile({ ...profile, email: e.target.value })}
-                      className="mt-1 block w-full rounded-lg shadow-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-                    />
+                    <p className="mt-1 text-gray-900 dark:text-gray-100">{profile.email}</p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
-                    <input
-                      type="password"
-                      value={profile.password}
-                      onChange={e => setProfile({ ...profile, password: e.target.value })}
-                      placeholder="••••••••"
-                      className="mt-1 block w-full rounded-lg shadow-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500 bg-white text-gray-900 placeholder-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-                    />
-                    <button
-                      type="button"
-                      onClick={handlePasswordChange}
-                      className="mt-2 px-3 py-1 bg-purple-600 text-white rounded"
-                    >
-                      Update Password
-                    </button>
-                  </div>
-                  <div className="flex items-center space-x-2 mt-4">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Dark Mode</span>
-                    <button
-                      type="button"
-                      onClick={toggleDarkMode}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full ${darkMode ? 'bg-purple-500' : 'bg-gray-300'}`}
-                    >
-                      <span className="sr-only">Toggle Dark Mode</span>
-                      <span className={`inline-block h-4 w-4 transform bg-white rounded-full transition ${darkMode ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
-                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(true)}
+                  className="mt-4 px-3 py-2 bg-purple-600 text-white rounded"
+                >
+                  Update Profile
+                </button>
+                <div className="flex items-center space-x-2 mt-4">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Dark Mode</span>
+                  <button
+                    type="button"
+                    onClick={toggleDarkMode}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${darkMode ? 'bg-purple-500' : 'bg-gray-300'}`}
+                  >
+                    <span className="sr-only">Toggle Dark Mode</span>
+                    <span className={`inline-block h-4 w-4 transform bg-white rounded-full transition ${darkMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
                 </div>
               </section>
             )}
@@ -259,6 +245,13 @@ export default function SettingsPage() {
           </div>
         </main>
       </div>
+      {showModal && (
+        <ProfileModal
+          profile={profile}
+          onSave={handleProfileSave}
+          onClose={() => setShowModal(false)}
+        />
+      )}
     </div>
   );
 }
