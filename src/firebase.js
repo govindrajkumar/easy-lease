@@ -4,6 +4,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth } from 'firebase/auth'; // Import getAuth for authentication
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getMessaging } from 'firebase/messaging';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -26,4 +27,5 @@ export const auth = getAuth(app); // EXPORT THE AUTH OBJECT
 export const db = getFirestore(app);
 // Use the specified storage bucket for all storage operations
 export const storage = getStorage(app, "gs://easylease-sgaap.firebasestorage.app");
+export const messaging = getMessaging(app);
 const analytics = getAnalytics(app);
