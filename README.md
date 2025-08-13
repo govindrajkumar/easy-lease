@@ -8,6 +8,10 @@ The Google Maps Places API is required for address autocomplete. For now, the ke
 
 In production, consider storing this key in an environment variable. An `.env.example` file is provided as a template for that setup.
 
+### HelloSign
+
+Embedded lease signing uses HelloSign. The API key and client ID are currently hardcoded in `src/pages/TenantDashboard.js`. Update the `HELLOSIGN_API_KEY` and `HELLOSIGN_CLIENT_ID` constants in that file with your own credentials when deploying.
+
 ## Available Scripts
 
 In the project directory, you can run:
