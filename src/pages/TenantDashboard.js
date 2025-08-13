@@ -20,6 +20,9 @@ export default function TenantDashboard() {
   const [unread, setUnread] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
+  const HELLOSIGN_API_KEY = 'f91934661f9c4374956ba03c3d2997ad15835e9e250f68ddccbe903dd1ec3344';
+  const HELLOSIGN_CLIENT_ID = 'REPLACE_WITH_CLIENT_ID';
+
   const userFirstName = sessionStorage.getItem('user_first_name');
   const userEmail = sessionStorage.getItem('user_email');
 
@@ -110,18 +113,63 @@ export default function TenantDashboard() {
     navigate('/');
   };
 
-  const handleAgreementUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !lease) return;
+  const handleSignLease = async () => {
+    if (!lease) return;
+    const user = auth.currentUser;
+    if (!user) return;
     try {
-      const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      await updateDoc(doc(db, 'Leases', lease.id), { signed_agreement_url: url });
-      setLease((prev) => ({ ...prev, signed_agreement_url: url }));
-      setUploadMessage('Agreement uploaded successfully.');
-    } catch {
-      setUploadMessage('Failed to upload agreement.');
+      const data = new URLSearchParams();
+      data.append('test_mode', '1');
+      data.append('client_id', HELLOSIGN_CLIENT_ID);
+      data.append('signers[0][email_address]', userEmail || user.email || '');
+      data.append('signers[0][name]', userFirstName || 'Tenant');
+      data.append('file_url', 'https://forms.mgcs.gov.on.ca/dataset/edff7620-980b-455f-9666-643196d8312f/resource/44548947-1727-4928-81df-dfc33ffd649a/download/2229e_flat.pdf');
+
+      const resp = await fetch('https://api.hellosign.com/v3/signature_request/create_embedded', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':'),
+        },
+        body: data,
+      });
+      if (!resp.ok) throw new Error('Failed to create signature request');
+      const json = await resp.json();
+      const signatureId = json.signature_request.signatures[0].signature_id;
+      const signatureRequestId = json.signature_request.signature_request_id;
+
+      const signUrlResp = await fetch(`https://api.hellosign.com/v3/embedded/sign_url/${signatureId}`, {
+        headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') },
+      });
+      const signUrlJson = await signUrlResp.json();
+      const signUrl = signUrlJson.embedded.sign_url;
+
+      const openHelloSign = () => {
+        if (window && window.HelloSign && window.HelloSign.open) {
+          window.HelloSign.open({ url: signUrl });
+          window.HelloSign.on('sign', async () => {
+            try {
+              const fileResp = await fetch(`https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf`, {
+                headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') },
+              });
+              const blob = await fileResp.blob();
+              const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
+              await uploadBytes(fileRef, blob);
+              const url = await getDownloadURL(fileRef);
+              await updateDoc(doc(db, 'Leases', lease.id), { signed_agreement_url: url });
+              setLease((prev) => ({ ...prev, signed_agreement_url: url }));
+              setUploadMessage('Agreement signed successfully.');
+            } catch (err) {
+              console.error('Failed to save signed agreement', err);
+            }
+          });
+        } else {
+          window.open(signUrl, '_blank');
+        }
+      };
+
+      openHelloSign();
+    } catch (err) {
+      console.error('Error initiating HelloSign', err);
     }
   };
 
@@ -322,13 +370,14 @@ export default function TenantDashboard() {
                     </motion.a>
                   ) : (
                     <>
-                      <label className="block text-sm mb-2 dark:text-gray-300">Upload signed agreement</label>
-                      <input
-                        type="file"
-                        accept="application/pdf,image/*"
-                        onChange={handleAgreementUpload}
-                        className="text-sm"
-                      />
+                      <motion.button
+                        onClick={handleSignLease}
+                        className="inline-block px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded shadow hover:from-purple-600 hover:to-indigo-500"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        Sign Lease
+                      </motion.button>
                       {uploadMessage && (
                         <p className="mt-2 text-green-600 dark:text-green-400">{uploadMessage}</p>
                       )}
