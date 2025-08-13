@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import MobileNav from '../components/MobileNav';
+import ChatBubble from '../components/ChatBubble';
 import { tenantNavItems } from '../constants/navItems';
 import {
   collection,
@@ -14,6 +15,7 @@ import {
   serverTimestamp,
   onSnapshot,
   orderBy,
+  updateDoc,
 } from 'firebase/firestore';
 
 export default function TenantAnnouncementsPage() {
@@ -22,13 +24,14 @@ export default function TenantAnnouncementsPage() {
   const [firstName, setFirstName] = useState('');
   const [user, setUser] = useState(null);
   const [property, setProperty] = useState(null);
-  const [unread, setUnread] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [landlordName, setLandlordName] = useState('');
   const [activeId, setActiveId] = useState('');
   const [messagesMap, setMessagesMap] = useState({});
+  const messageUnsubs = useRef({});
   const navigate = useNavigate();
 
-  const navItems = tenantNavItems({ active: 'announcements', unread });
+  const navItems = tenantNavItems({ active: 'announcements', unreadMessages });
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
@@ -67,10 +70,14 @@ export default function TenantAnnouncementsPage() {
     const unsubAuth = auth.onAuthStateChanged((u) => {
       if (unsubMessages) unsubMessages();
       if (u) {
-        const q = query(collection(db, 'Messages'), where('to', '==', u.uid), where('read', '==', false));
-        unsubMessages = onSnapshot(q, (snap) => setUnread(snap.size));
+        const q = query(
+          collection(db, 'Messages'),
+          where('recipientUid', '==', u.uid),
+          where('read', '==', false)
+        );
+        unsubMessages = onSnapshot(q, (snap) => setUnreadMessages(snap.size));
       } else {
-        setUnread(0);
+        setUnreadMessages(0);
       }
     });
     return () => {
@@ -89,35 +96,56 @@ export default function TenantAnnouncementsPage() {
     const ann = announcements.find((a) => a.id === id);
     if (!user || !ann || !text) return;
     await addDoc(collection(db, 'Messages'), {
-      from: user.uid,
-      to: ann.landlord_id,
+      senderUid: user.uid,
+      recipientUid: ann.landlord_id,
       text,
-      announcement_id: id,
-      created_at: serverTimestamp(),
+      announcementId: id,
+      createdAt: serverTimestamp(),
+      read: false,
     });
     setReplyMap({ ...replyMap, [id]: '' });
-    await fetchMessages(id);
     alert('Reply sent');
-  };
-
-  const fetchMessages = async (id) => {
-    const snap = await getDocs(
-      query(collection(db, 'Messages'), where('announcement_id', '==', id))
-    );
-    const msgs = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0));
-    setMessagesMap((prev) => ({ ...prev, [id]: msgs }));
   };
 
   const toggleAnnouncement = async (id) => {
     if (activeId === id) {
+      if (messageUnsubs.current[id]) {
+        messageUnsubs.current[id]();
+        delete messageUnsubs.current[id];
+      }
       setActiveId('');
     } else {
       setActiveId(id);
-      if (!messagesMap[id]) await fetchMessages(id);
+      if (!messageUnsubs.current[id]) {
+        const q = query(
+          collection(db, 'Messages'),
+          where('announcementId', '==', id),
+          orderBy('createdAt')
+        );
+        messageUnsubs.current[id] = onSnapshot(q, (snap) => {
+          const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setMessagesMap((prev) => ({ ...prev, [id]: msgs }));
+        });
+      }
+      if (user) {
+        const unreadSnap = await getDocs(
+          query(
+            collection(db, 'Messages'),
+            where('announcementId', '==', id),
+            where('recipientUid', '==', user.uid),
+            where('read', '==', false)
+          )
+        );
+        unreadSnap.forEach((d) => updateDoc(doc(db, 'Messages', d.id), { read: true }));
+      }
     }
   };
+
+  useEffect(() => {
+    return () => {
+      Object.values(messageUnsubs.current).forEach((unsub) => unsub());
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
@@ -142,7 +170,7 @@ export default function TenantAnnouncementsPage() {
           <nav className="px-4 space-y-2 mt-4">
             <a href="/tenant-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📄 Lease Info</a>
             <a href="/tenant-payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments</a>
-              <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance{unread > 0 && <span className="ml-2 bg-red-500 text-white rounded-full text-xs px-2">{unread}</span>}</a>
+            <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
             <a href="/tenant-announcements" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">🔔 Announcements</a>
             <a href="/tenant-settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👤 Profile &amp; Settings</a>
           </nav>
@@ -171,12 +199,7 @@ export default function TenantAnnouncementsPage() {
               {activeId === a.id && (
                 <div className="mt-2 space-y-2">
                   {(messagesMap[a.id] || []).map((m) => (
-                    <p key={m.id} className="text-sm">
-                      <span className="font-semibold">
-                        {m.from === user?.uid ? firstName || 'You' : landlordName || 'Landlord'}
-                      </span>{' '}
-                      {m.text}
-                    </p>
+                    <ChatBubble key={m.id} message={m} currentUid={user?.uid} />
                   ))}
                   {messagesMap[a.id] && messagesMap[a.id].length === 0 && (
                     <p className="text-sm text-gray-500 dark:text-gray-400">No conversation yet.</p>

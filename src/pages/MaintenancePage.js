@@ -129,10 +129,10 @@ export default function MaintenancePage() {
     const req = requests.find((r) => r.id === id);
     if (!req || !req.tenant_uid) return;
       await addDoc(collection(db, 'Messages'), {
-        from: user.uid,
-        to: req.tenant_uid,
+        senderUid: user.uid,
+        recipientUid: req.tenant_uid,
         text: msg,
-        created_at: serverTimestamp(),
+        createdAt: serverTimestamp(),
         read: false,
       });
     setMessageMap((prev) => ({ ...prev, [id]: '' }));

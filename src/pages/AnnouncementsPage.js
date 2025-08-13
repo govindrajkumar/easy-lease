@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../firebase';
@@ -12,9 +12,12 @@ import {
   addDoc,
   deleteDoc,
   serverTimestamp,
-  orderBy
+  orderBy,
+  onSnapshot,
+  updateDoc
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
+import ChatBubble from '../components/ChatBubble';
 import { landlordNavItems } from '../constants/navItems';
 
 export default function AnnouncementsPage() {
@@ -30,13 +33,15 @@ export default function AnnouncementsPage() {
   const [activeId, setActiveId] = useState('');
   const [messagesMap, setMessagesMap] = useState({});
   const [replyMap, setReplyMap] = useState({});
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const messageUnsubs = useRef({});
 
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/signin');
   };
 
-  const navItems = landlordNavItems({ active: 'announcements' });
+  const navItems = landlordNavItems({ active: 'announcements', unreadMessages });
 
   const tenantMap = tenants.reduce((acc, t) => ({ ...acc, [t.id]: t.name }), {});
   const propertyMap = properties.reduce(
@@ -44,24 +49,45 @@ export default function AnnouncementsPage() {
     {}
   );
 
-  const fetchMessages = async (id) => {
-    const snap = await getDocs(
-      query(collection(db, 'Messages'), where('announcement_id', '==', id))
-    );
-    const msgs = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0));
-    setMessagesMap((prev) => ({ ...prev, [id]: msgs }));
-  };
-
   const toggleAnnouncement = async (id) => {
     if (activeId === id) {
+      if (messageUnsubs.current[id]) {
+        messageUnsubs.current[id]();
+        delete messageUnsubs.current[id];
+      }
       setActiveId('');
     } else {
       setActiveId(id);
-      if (!messagesMap[id]) await fetchMessages(id);
+      if (!messageUnsubs.current[id]) {
+        const q = query(
+          collection(db, 'Messages'),
+          where('announcementId', '==', id),
+          orderBy('createdAt')
+        );
+        messageUnsubs.current[id] = onSnapshot(q, (snap) => {
+          const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setMessagesMap((prev) => ({ ...prev, [id]: msgs }));
+        });
+      }
+      if (user) {
+        const unreadSnap = await getDocs(
+          query(
+            collection(db, 'Messages'),
+            where('announcementId', '==', id),
+            where('recipientUid', '==', user.uid),
+            where('read', '==', false)
+          )
+        );
+        unreadSnap.forEach((d) => updateDoc(doc(db, 'Messages', d.id), { read: true }));
+      }
     }
   };
+
+  useEffect(() => {
+    return () => {
+      Object.values(messageUnsubs.current).forEach((unsub) => unsub());
+    };
+  }, []);
 
   const sendReply = async (id) => {
     const text = replyMap[id]?.trim();
@@ -78,16 +104,16 @@ export default function AnnouncementsPage() {
     await Promise.all(
       recipients.map((rid) =>
         addDoc(collection(db, 'Messages'), {
-          from: user.uid,
-          to: rid,
+          senderUid: user.uid,
+          recipientUid: rid,
           text,
-          announcement_id: id,
-          created_at: serverTimestamp(),
+          announcementId: id,
+          createdAt: serverTimestamp(),
+          read: false,
         })
       )
     );
     setReplyMap((prev) => ({ ...prev, [id]: '' }));
-    await fetchMessages(id);
     alert('Reply sent');
   };
 
@@ -121,11 +147,22 @@ export default function AnnouncementsPage() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, 'Messages'),
+      where('recipientUid', '==', user.uid),
+      where('read', '==', false)
+    );
+    const unsub = onSnapshot(q, (snap) => setUnreadMessages(snap.size));
+    return () => unsub();
+  }, [user]);
+
   const postAnnouncement = async (e) => {
     e.preventDefault();
     if (!form.message.trim()) return;
     try {
-      await addDoc(collection(db, 'Announcements'), {
+      const annRef = await addDoc(collection(db, 'Announcements'), {
         landlord_id: user.uid,
         target: form.target,
         property_id: form.target === 'property' ? form.propertyId : '',
@@ -133,6 +170,28 @@ export default function AnnouncementsPage() {
         message: form.message,
         created_at: serverTimestamp(),
       });
+      let recipients = [];
+      if (form.target === 'tenant' && form.tenantUid) {
+        recipients = [form.tenantUid];
+      } else if (form.target === 'property') {
+        recipients = tenants
+          .filter((t) => t.propertyId === form.propertyId)
+          .map((t) => t.id);
+      } else {
+        recipients = tenants.map((t) => t.id);
+      }
+      await Promise.all(
+        recipients.map((rid) =>
+          addDoc(collection(db, 'Messages'), {
+            senderUid: user.uid,
+            recipientUid: rid,
+            text: form.message,
+            announcementId: annRef.id,
+            createdAt: serverTimestamp(),
+            read: false,
+          })
+        )
+      );
       const annSnap = await getDocs(query(collection(db, 'Announcements'), where('landlord_id', '==', user.uid)));
       setAnnouncements(annSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setForm({ target: 'all', propertyId: '', tenantUid: '', message: '' });
@@ -289,12 +348,7 @@ export default function AnnouncementsPage() {
                   {activeId === a.id && (
                     <div className="mt-2 border-t pt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
                       {(messagesMap[a.id] || []).map((m) => (
-                        <p key={m.id} className="text-sm">
-                          <span className="font-semibold">
-                            {m.from === user?.uid ? firstName || 'You' : tenantMap[m.from] || m.from}
-                          </span>{' '}
-                          {m.text}
-                        </p>
+                        <ChatBubble key={m.id} message={m} currentUid={user?.uid} />
                       ))}
                       {messagesMap[a.id] && messagesMap[a.id].length === 0 && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">No conversation yet.</p>
