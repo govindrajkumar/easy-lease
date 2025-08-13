@@ -158,7 +158,7 @@ export default function TenantDashboard() {
 
       const openHelloSign = () => {
         if (window && window.HelloSign && window.HelloSign.open) {
-          window.HelloSign.open({ url: signUrl });
+          window.HelloSign.open({ url: signUrl, clientId: HELLOSIGN_CLIENT_ID });
           window.HelloSign.on('sign', async () => {
             try {
               const fileResp = await fetch(`https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf`, {
