@@ -71,7 +71,11 @@ export default function LandlordDashboard() {
 
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'Messages'), where('recipientUid', '==', user.uid));
+    const q = query(
+      collection(db, 'Messages'),
+      where('recipientUid', '==', user.uid),
+      where('read', '==', false)
+    );
     const unsub = onSnapshot(q, (snap) => setUnreadMessages(snap.size));
     return () => unsub();
   }, [user]);
@@ -246,21 +250,20 @@ export default function LandlordDashboard() {
                 </span>
               )}
             </a>
-            <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
+            <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative">
+              🔔 Announcements
+              {unreadMessages > 0 && (
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
+                  {unreadMessages}
+                </span>
+              )}
+            </a>
             <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
             <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative">
               🛠️ Maintenance
               {newRequests > 0 && (
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
                   {newRequests}
-                </span>
-              )}
-            </a>
-            <a href="/chat" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative">
-              💬 Chat
-              {unreadMessages > 0 && (
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
-                  {unreadMessages}
                 </span>
               )}
             </a>
