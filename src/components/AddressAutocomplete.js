@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 
+const GOOGLE_MAPS_API_KEY = 'AIzaSyB05O8lARA5zAXOa9EhjxcoabTASqdrJ0U';
+
 export default function AddressAutocomplete({ value, onChange, onSelect }) {
   const inputRef = useRef(null);
   // Keep a mutable ref to the latest onSelect to avoid re-initialising
@@ -47,7 +49,7 @@ export default function AddressAutocomplete({ value, onChange, onSelect }) {
       if (!existing) {
         const script = document.createElement('script');
         script.id = 'google-maps-script';
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GOOGLE_MAPS_API_KEY}&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
         script.async = true;
         script.onload = initAutocomplete;
         document.body.appendChild(script);

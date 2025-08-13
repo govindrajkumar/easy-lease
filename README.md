@@ -2,6 +2,12 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app) and configured as a Progressive Web App with offline support.
 
+## Google Maps API Key
+
+The Google Maps Places API is required for address autocomplete. For now, the key is hardcoded in `src/components/AddressAutocomplete.js` in the `GOOGLE_MAPS_API_KEY` constant. Replace it with your own key as needed.
+
+In production, consider storing this key in an environment variable. An `.env.example` file is provided as a template for that setup.
+
 ## Available Scripts
 
 In the project directory, you can run:
