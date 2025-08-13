@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { auth, db, storage } from '../firebase';
+import { auth, db, storage, functions } from '../firebase';
 import MobileNav from '../components/MobileNav';
 import { tenantNavItems } from '../constants/navItems';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function TenantDashboard() {
@@ -122,6 +123,19 @@ export default function TenantDashboard() {
       setUploadMessage('Agreement uploaded successfully.');
     } catch {
       setUploadMessage('Failed to upload agreement.');
+    }
+  };
+
+  const handleSignLease = async () => {
+    if (!lease) return;
+    try {
+      const signLease = httpsCallable(functions, 'createLeaseSignature');
+      const result = await signLease({ leaseId: lease.id });
+      if (result?.data?.url) {
+        window.open(result.data.url, '_blank');
+      }
+    } catch (err) {
+      console.error('Failed to initiate signing', err);
     }
   };
 
@@ -297,7 +311,7 @@ export default function TenantDashboard() {
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
               <h3 className="text-sm text-gray-500 dark:text-gray-400">Lease Agreement</h3>
-                <motion.a
+              <motion.a
                   href="https://forms.mgcs.gov.on.ca/dataset/edff7620-980b-455f-9666-643196d8312f/resource/44548947-1727-4928-81df-dfc33ffd649a/download/2229e_flat.pdf"
                   className="mt-2 inline-block px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded shadow hover:from-purple-600 hover:to-indigo-500"
                   target="_blank"
@@ -322,16 +336,26 @@ export default function TenantDashboard() {
                     </motion.a>
                   ) : (
                     <>
-                      <label className="block text-sm mb-2 dark:text-gray-300">Upload signed agreement</label>
-                      <input
-                        type="file"
-                        accept="application/pdf,image/*"
-                        onChange={handleAgreementUpload}
-                        className="text-sm"
-                      />
-                      {uploadMessage && (
-                        <p className="mt-2 text-green-600 dark:text-green-400">{uploadMessage}</p>
-                      )}
+                      <motion.button
+                        onClick={handleSignLease}
+                        className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded shadow hover:from-indigo-600 hover:to-blue-500"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        Sign Lease
+                      </motion.button>
+                      <div className="mt-4">
+                        <label className="block text-sm mb-2 dark:text-gray-300">Or upload signed agreement</label>
+                        <input
+                          type="file"
+                          accept="application/pdf,image/*"
+                          onChange={handleAgreementUpload}
+                          className="text-sm"
+                        />
+                        {uploadMessage && (
+                          <p className="mt-2 text-green-600 dark:text-green-400">{uploadMessage}</p>
+                        )}
+                      </div>
                     </>
                   )
                 ) : null}
