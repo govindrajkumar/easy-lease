@@ -20,8 +20,9 @@ export default function TenantDashboard() {
   const [unread, setUnread] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
-  const HELLOSIGN_API_KEY = 'f91934661f9c4374956ba03c3d2997ad15835e9e250f68ddccbe903dd1ec3344';
-  const HELLOSIGN_CLIENT_ID = 'REPLACE_WITH_CLIENT_ID';
+  const HELLOSIGN_API_KEY =
+    'f91934661f9c4374956ba03c3d2997ad15835e9e250f68ddccbe903dd1ec3344';
+  const HELLOSIGN_CLIENT_ID = 'f75682d32e0636b575853424f08d1e38';
 
   const userFirstName = sessionStorage.getItem('user_first_name');
   const userEmail = sessionStorage.getItem('user_email');
@@ -117,22 +118,34 @@ export default function TenantDashboard() {
     if (!lease) return;
     const user = auth.currentUser;
     if (!user) return;
+    if (!HELLOSIGN_API_KEY || !HELLOSIGN_CLIENT_ID) {
+      console.error('HelloSign API credentials are not configured.');
+      setUploadMessage('Unable to initiate signing at this time.');
+      return;
+    }
     try {
       const data = new URLSearchParams();
       data.append('test_mode', '1');
       data.append('client_id', HELLOSIGN_CLIENT_ID);
       data.append('signers[0][email_address]', userEmail || user.email || '');
       data.append('signers[0][name]', userFirstName || 'Tenant');
-      data.append('file_url', 'https://forms.mgcs.gov.on.ca/dataset/edff7620-980b-455f-9666-643196d8312f/resource/44548947-1727-4928-81df-dfc33ffd649a/download/2229e_flat.pdf');
+      data.append(
+        'file_url',
+        'https://forms.mgcs.gov.on.ca/dataset/edff7620-980b-455f-9666-643196d8312f/resource/44548947-1727-4928-81df-dfc33ffd649a/download/2229e_flat.pdf',
+      );
 
       const resp = await fetch('https://api.hellosign.com/v3/signature_request/create_embedded', {
         method: 'POST',
         headers: {
           Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':'),
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: data,
       });
-      if (!resp.ok) throw new Error('Failed to create signature request');
+      if (!resp.ok) {
+        const errorText = await resp.text();
+        throw new Error(`Failed to create signature request: ${errorText}`);
+      }
       const json = await resp.json();
       const signatureId = json.signature_request.signatures[0].signature_id;
       const signatureRequestId = json.signature_request.signature_request_id;
