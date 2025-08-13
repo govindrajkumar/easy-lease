@@ -20,6 +20,7 @@ import TenantRequestsApprovalPage from './pages/TenantRequestsApprovalPage';
 import SettingsPage from './pages/SettingsPage';
 import TenantSettingsPage from './pages/TenantSettingsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import ChatPage from './pages/ChatPage';
 
 function AnimatedPage({ children }) {
   return (
@@ -57,6 +58,7 @@ function AnimatedRoutes() {
           <Route path="/tenant-announcements" element={<AnimatedPage><TenantAnnouncementsPage /></AnimatedPage>} />
           <Route path="/settings" element={<AnimatedPage><SettingsPage /></AnimatedPage>} />
           <Route path="/tenant-settings" element={<AnimatedPage><TenantSettingsPage /></AnimatedPage>} />
+          <Route path="/chat" element={<AnimatedPage><ChatPage /></AnimatedPage>} />
         </Route>
       </Routes>
     </AnimatePresence>

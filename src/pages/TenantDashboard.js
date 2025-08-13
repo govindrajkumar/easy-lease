@@ -18,11 +18,12 @@ export default function TenantDashboard() {
   const [lease, setLease] = useState(null);
   const [uploadMessage, setUploadMessage] = useState('');
   const [unread, setUnread] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const userFirstName = sessionStorage.getItem('user_first_name');
   const userEmail = sessionStorage.getItem('user_email');
 
-  const navItems = tenantNavItems({ active: 'dashboard', unread });
+  const navItems = tenantNavItems({ active: 'dashboard', unread, unreadMessages });
 
   useEffect(() => {
     const fetchUserStatus = async () => {
@@ -58,10 +59,10 @@ export default function TenantDashboard() {
     const unsubAuth = auth.onAuthStateChanged((u) => {
       if (unsubMessages) unsubMessages();
       if (u) {
-        const q = query(collection(db, 'Messages'), where('to', '==', u.uid), where('read', '==', false));
-        unsubMessages = onSnapshot(q, (snap) => setUnread(snap.size));
+        const q = query(collection(db, 'Messages'), where('recipientUid', '==', u.uid));
+        unsubMessages = onSnapshot(q, (snap) => setUnreadMessages(snap.size));
       } else {
-        setUnread(0);
+        setUnreadMessages(0);
       }
     });
     return () => {
@@ -241,9 +242,15 @@ export default function TenantDashboard() {
             <nav className="flex-1 px-4 space-y-2">
               <a href="/tenant-dashboard" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">📄 Lease Info</a>
               <a href="/tenant-payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments</a>
-              <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance{unread > 0 && <span className="ml-2 bg-red-500 text-white rounded-full text-xs px-2">{unread}</span>}</a>
-              <a href="/tenant-announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
-              <a href="/tenant-settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👤 Profile &amp; Settings</a>
+                <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance{unread > 0 && <span className="ml-2 bg-red-500 text-white rounded-full text-xs px-2">{unread}</span>}</a>
+                <a href="/chat" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                  💬 Chat
+                  {unreadMessages > 0 && (
+                    <span className="ml-2 bg-red-500 text-white rounded-full text-xs px-2">{unreadMessages}</span>
+                  )}
+                </a>
+                <a href="/tenant-announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
+                <a href="/tenant-settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👤 Profile &amp; Settings</a>
             </nav>
             <div className="px-6 py-4 border-t dark:border-gray-700">
               <div className="flex items-center space-x-3">

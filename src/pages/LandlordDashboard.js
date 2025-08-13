@@ -11,6 +11,7 @@ import {
   getDocs,
   query,
   where,
+  onSnapshot,
 } from 'firebase/firestore';
 
 export default function LandlordDashboard() {
@@ -25,6 +26,7 @@ export default function LandlordDashboard() {
   const [upcomingPayments, setUpcomingPayments] = useState([]);
   const [recentMaintenance, setRecentMaintenance] = useState([]);
   const [propertyMap, setPropertyMap] = useState({});
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const { darkMode } = useTheme();
   const navigate = useNavigate();
 
@@ -65,6 +67,13 @@ export default function LandlordDashboard() {
       setPropertyMap(map);
     };
     fetchProperties();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'Messages'), where('recipientUid', '==', user.uid));
+    const unsub = onSnapshot(q, (snap) => setUnreadMessages(snap.size));
+    return () => unsub();
   }, [user]);
 
   useEffect(() => {
@@ -193,7 +202,7 @@ export default function LandlordDashboard() {
     Completed: 'text-green-500 dark:text-green-400',
   };
 
-  const navItems = landlordNavItems({ active: 'dashboard', pendingTenants, newRequests });
+  const navItems = landlordNavItems({ active: 'dashboard', pendingTenants, newRequests, unreadMessages });
 
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
@@ -244,6 +253,14 @@ export default function LandlordDashboard() {
               {newRequests > 0 && (
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
                   {newRequests}
+                </span>
+              )}
+            </a>
+            <a href="/chat" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative">
+              💬 Chat
+              {unreadMessages > 0 && (
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs rounded-full px-2">
+                  {unreadMessages}
                 </span>
               )}
             </a>
