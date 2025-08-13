@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { auth, db, storage } from '../firebase';
+import { auth, db, functions } from '../firebase';
 import MobileNav from '../components/MobileNav';
 import { tenantNavItems } from '../constants/navItems';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { httpsCallable } from 'firebase/functions';
 
 export default function TenantDashboard() {
   const navigate = useNavigate();
@@ -16,7 +16,8 @@ export default function TenantDashboard() {
   const [sendingRequest, setSendingRequest] = useState(false);
   const [property, setProperty] = useState(null);
   const [lease, setLease] = useState(null);
-  const [uploadMessage, setUploadMessage] = useState('');
+  const [signMessage, setSignMessage] = useState('');
+  const [signing, setSigning] = useState(false);
   const [unread, setUnread] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
@@ -110,20 +111,6 @@ export default function TenantDashboard() {
     navigate('/');
   };
 
-  const handleAgreementUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !lease) return;
-    try {
-      const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      await updateDoc(doc(db, 'Leases', lease.id), { signed_agreement_url: url });
-      setLease((prev) => ({ ...prev, signed_agreement_url: url }));
-      setUploadMessage('Agreement uploaded successfully.');
-    } catch {
-      setUploadMessage('Failed to upload agreement.');
-    }
-  };
 
   const handleRequestSubmit = async (e) => {
     e.preventDefault();
@@ -150,6 +137,37 @@ export default function TenantDashboard() {
       alert('Failed to send request. Please try again.');
     } finally {
       setSendingRequest(false);
+    }
+  };
+
+  const handleSignLease = async () => {
+    if (!lease) return;
+    try {
+      setSigning(true);
+      const createSignature = httpsCallable(functions, 'createLeaseSignature');
+      const res = await createSignature({
+        leaseId: lease.id,
+        tenantEmail: userEmail,
+        tenantName: userFirstName,
+      });
+      const { signUrl, signatureRequestId } = res.data;
+      window.HelloSign.open(signUrl, {
+        allowCancel: true,
+        skipDomainVerification: true,
+        messageListener: async (eventData) => {
+          if (eventData.event === 'signature_request_signed') {
+            const storeSigned = httpsCallable(functions, 'storeSignedLease');
+            const out = await storeSigned({ leaseId: lease.id, signatureRequestId });
+            setLease((prev) => ({ ...prev, signed_agreement_url: out.data.url }));
+            setSignMessage('Agreement signed successfully.');
+          }
+        },
+      });
+    } catch (err) {
+      console.error('Error launching HelloSign', err);
+      setSignMessage('Failed to launch signing.');
+    } finally {
+      setSigning(false);
     }
   };
 
@@ -322,15 +340,17 @@ export default function TenantDashboard() {
                     </motion.a>
                   ) : (
                     <>
-                      <label className="block text-sm mb-2 dark:text-gray-300">Upload signed agreement</label>
-                      <input
-                        type="file"
-                        accept="application/pdf,image/*"
-                        onChange={handleAgreementUpload}
-                        className="text-sm"
-                      />
-                      {uploadMessage && (
-                        <p className="mt-2 text-green-600 dark:text-green-400">{uploadMessage}</p>
+                      <motion.button
+                        onClick={handleSignLease}
+                        disabled={signing}
+                        className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded shadow hover:from-purple-600 hover:to-indigo-500 disabled:opacity-50"
+                        whileHover={{ scale: signing ? 1 : 1.05 }}
+                        whileTap={{ scale: signing ? 1 : 0.95 }}
+                      >
+                        {signing ? 'Opening...' : 'Sign Lease'}
+                      </motion.button>
+                      {signMessage && (
+                        <p className="mt-2 text-green-600 dark:text-green-400">{signMessage}</p>
                       )}
                     </>
                   )

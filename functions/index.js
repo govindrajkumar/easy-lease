@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const DropboxSign = require('@dropbox/sign');
 
 admin.initializeApp();
 
@@ -92,3 +93,51 @@ exports.notifyMessageCreated = functions.firestore
       data.text || 'You have a new message.'
     );
   });
+
+exports.createLeaseSignature = functions.https.onCall(async (data, context) => {
+  const { leaseId, tenantEmail, tenantName } = data;
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const signatureRequestApi = new DropboxSign.SignatureRequestApi();
+  signatureRequestApi.username = functions.config().hellosign.api_key;
+  const embeddedApi = new DropboxSign.EmbeddedApi();
+  embeddedApi.username = functions.config().hellosign.api_key;
+
+  const req = {
+    test_mode: 1,
+    subject: 'Lease Agreement',
+    message: 'Please sign this lease agreement',
+    file_url: [
+      'https://forms.mgcs.gov.on.ca/dataset/edff7620-980b-455f-9666-643196d8312f/resource/44548947-1727-4928-81df-dfc33ffd649a/download/2229e_flat.pdf',
+    ],
+    signers: [{ email_address: tenantEmail, name: tenantName }],
+  };
+
+  const result = await signatureRequestApi.signatureRequestCreateEmbedded(req);
+  const signatureRequestId = result.body.signature_request.signature_request_id;
+  const signatureId = result.body.signature_request.signatures[0].signature_id;
+  const signUrlRes = await embeddedApi.embeddedSignUrl(signatureId);
+  return { signUrl: signUrlRes.body.embedded.sign_url, signatureId, signatureRequestId };
+});
+
+exports.storeSignedLease = functions.https.onCall(async (data, context) => {
+  const { leaseId, signatureRequestId } = data;
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const signatureRequestApi = new DropboxSign.SignatureRequestApi();
+  signatureRequestApi.username = functions.config().hellosign.api_key;
+
+  const response = await signatureRequestApi.signatureRequestFiles(signatureRequestId, { file_type: 'pdf' });
+  const buffer = response.data;
+
+  const bucket = admin.storage().bucket();
+  const file = bucket.file(`signed_leases/${leaseId}.pdf`);
+  await file.save(buffer);
+  const [url] = await file.getSignedUrl({ action: 'read', expires: '03-09-2491' });
+  await db.collection('Leases').doc(leaseId).update({ signed_agreement_url: url });
+  return { url };
+});
