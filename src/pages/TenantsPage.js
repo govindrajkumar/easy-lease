@@ -30,13 +30,6 @@ export default function TenantsPage() {
   const [selectedPropertyId, setSelectedPropertyId] = useState('');
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignLoading, setAssignLoading] = useState(false);
-  const [showLeaseModal, setShowLeaseModal] = useState(false);
-  const [leaseDetails, setLeaseDetails] = useState({
-    rent: '',
-    startDate: '',
-    endDate: '',
-    deposit: '',
-  });
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTenant, setEditTenant] = useState(null);
   const [editForm, setEditForm] = useState({ first_name: '', last_name: '', email: '' });
@@ -176,38 +169,8 @@ export default function TenantsPage() {
       await updateDoc(doc(db, 'TenantRequests', selectedRequest.id), { status: 'Approved' });
       setRequests((prev) => prev.filter((r) => r.id !== selectedRequest.id));
       setShowAssignModal(false);
-      setLeaseDetails({ rent: '', startDate: '', endDate: '', deposit: '' });
-      setShowLeaseModal(true);
     } finally {
       setAssignLoading(false);
-    }
-  };
-
-  const handleSaveLease = async () => {
-    if (!selectedRequest || !selectedPropertyId) return;
-    try {
-      await addDoc(collection(db, 'Leases'), {
-        tenant_uid: selectedRequest.tenant_uid,
-        property_id: selectedPropertyId,
-        rent_amount: leaseDetails.rent,
-        start_date: leaseDetails.startDate,
-        end_date: leaseDetails.endDate,
-        security_deposit: leaseDetails.deposit,
-        created_at: serverTimestamp(),
-      });
-      await addDoc(collection(db, 'RentPayments'), {
-        tenant_uid: selectedRequest.tenant_uid,
-        landlord_uid: user.uid,
-        property_id: selectedPropertyId,
-        amount: leaseDetails.rent,
-        due_date: leaseDetails.startDate,
-        paid: false,
-        created_at: serverTimestamp(),
-      });
-      setShowLeaseModal(false);
-    } catch (e) {
-      console.error('Failed to save lease', e);
-      alert('Failed to save lease details');
     }
   };
 
@@ -324,7 +287,16 @@ export default function TenantsPage() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">{t.email}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Property: {t.propertyName}</p>
                   <div className="mt-2 flex space-x-2">
-                    {!t.signedAgreementUrl && (
+                    {t.signedAgreementUrl ? (
+                      <a
+                        href={t.signedAgreementUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                      >
+                        View Agreement
+                      </a>
+                    ) : (
                       <button
                         className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
                         onClick={() => sendAgreementReminder(t)}
@@ -424,55 +396,6 @@ export default function TenantsPage() {
                 disabled={!selectedPropertyId || assignLoading}
               >
                 {assignLoading ? 'Assigning...' : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showLeaseModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md space-y-4">
-            <h3 className="text-lg font-semibold dark:text-gray-100">Lease Details</h3>
-            <input
-              type="number"
-              placeholder="Rent Amount"
-              className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100"
-              value={leaseDetails.rent}
-              onChange={(e) => setLeaseDetails({ ...leaseDetails, rent: e.target.value })}
-            />
-            <input
-              type="text"
-              placeholder="Security Deposit"
-              className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100"
-              value={leaseDetails.deposit}
-              onChange={(e) => setLeaseDetails({ ...leaseDetails, deposit: e.target.value })}
-            />
-            <input
-              type="date"
-              placeholder="Start Date"
-              className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100"
-              value={leaseDetails.startDate}
-              onChange={(e) => setLeaseDetails({ ...leaseDetails, startDate: e.target.value })}
-            />
-            <input
-              type="date"
-              placeholder="End Date"
-              className="w-full border rounded p-2 dark:bg-gray-900 dark:text-gray-100"
-              value={leaseDetails.endDate}
-              onChange={(e) => setLeaseDetails({ ...leaseDetails, endDate: e.target.value })}
-            />
-            <div className="flex justify-end space-x-2">
-              <button
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 rounded"
-                onClick={() => setShowLeaseModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                onClick={handleSaveLease}
-              >
-                Save
               </button>
             </div>
           </div>

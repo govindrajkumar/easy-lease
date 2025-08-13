@@ -16,13 +16,22 @@ export default function TenantDashboard() {
   const [sendingRequest, setSendingRequest] = useState(false);
   const [property, setProperty] = useState(null);
   const [lease, setLease] = useState(null);
-  const [uploadMessage, setUploadMessage] = useState('');
   const [unread, setUnread] = useState(0);
 
   const userFirstName = sessionStorage.getItem('user_first_name');
   const userEmail = sessionStorage.getItem('user_email');
 
   const navItems = tenantNavItems({ active: 'dashboard', unread });
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.hellosign.com/v3/hellosign.min.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchUserStatus = async () => {
@@ -105,19 +114,51 @@ export default function TenantDashboard() {
     navigate('/');
   };
 
-  const handleAgreementUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !lease) return;
+  const createLeaseRecord = async () => {
+    if (!lease) return null;
     try {
+      const res = await fetch('/api/createLeaseRecord', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leaseId: lease.id }),
+      });
+      if (!res.ok) throw new Error('Failed to initiate signing');
+      return await res.json();
+    } catch (err) {
+      console.error('createLeaseRecord error', err);
+      return null;
+    }
+  };
+
+  const handleSaveLease = async (signatureRequestId) => {
+    try {
+      const res = await fetch(`/api/downloadSignedLease?signatureRequestId=${signatureRequestId}`);
+      if (!res.ok) throw new Error('Failed to fetch signed lease');
+      const blob = await res.blob();
       const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
-      await uploadBytes(fileRef, file);
+      await uploadBytes(fileRef, blob);
       const url = await getDownloadURL(fileRef);
       await updateDoc(doc(db, 'Leases', lease.id), { signed_agreement_url: url });
       setLease((prev) => ({ ...prev, signed_agreement_url: url }));
-      setUploadMessage('Agreement uploaded successfully.');
-    } catch {
-      setUploadMessage('Failed to upload agreement.');
+    } catch (err) {
+      console.error('handleSaveLease error', err);
     }
+  };
+
+  const openSignModal = async () => {
+    if (!lease) return;
+    const data = await createLeaseRecord();
+    if (!data || !window.HelloSign) return;
+    const client = new window.HelloSign();
+    client.open(data.signUrl || data.sign_url, {
+      allowCancel: true,
+      skipDomainVerification: true,
+      messageListener: async (eventData) => {
+        if (eventData.event === 'signature_request_signed') {
+          await handleSaveLease(data.signatureRequestId || data.signature_request_id);
+        }
+      },
+    });
   };
 
   const handleRequestSubmit = async (e) => {
@@ -298,7 +339,7 @@ export default function TenantDashboard() {
                   Download Standard Lease
                 </motion.a>
               <div className="mt-4">
-                {lease ? (
+                {lease && (
                   lease.signed_agreement_url ? (
                     <motion.a
                       href={lease.signed_agreement_url}
@@ -311,20 +352,16 @@ export default function TenantDashboard() {
                       View Signed Agreement
                     </motion.a>
                   ) : (
-                    <>
-                      <label className="block text-sm mb-2 dark:text-gray-300">Upload signed agreement</label>
-                      <input
-                        type="file"
-                        accept="application/pdf,image/*"
-                        onChange={handleAgreementUpload}
-                        className="text-sm"
-                      />
-                      {uploadMessage && (
-                        <p className="mt-2 text-green-600 dark:text-green-400">{uploadMessage}</p>
-                      )}
-                    </>
+                    <motion.button
+                      onClick={openSignModal}
+                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded shadow hover:from-purple-600 hover:to-blue-500"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Sign Lease
+                    </motion.button>
                   )
-                ) : null}
+                )}
               </div>
             </div>
           </main>
