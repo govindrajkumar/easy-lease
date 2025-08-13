@@ -25,6 +25,7 @@ export default function TenantMaintenancePage() {
   const [property, setProperty] = useState(null);
   const [properties, setProperties] = useState([]);
   const [filterProp, setFilterProp] = useState('');
+  const [timeFilter, setTimeFilter] = useState('');
   const [activeReq, setActiveReq] = useState(null);
   const [updateText, setUpdateText] = useState('');
   const [formOpen, setFormOpen] = useState(false);
@@ -159,19 +160,43 @@ export default function TenantMaintenancePage() {
             New Request
           </button>
 
-          <select
-            value={filterProp}
-            onChange={(e) => setFilterProp(e.target.value)}
-            className="border rounded p-2 dark:bg-gray-900 dark:border-gray-700 mb-4"
-          >
-            <option value="">All Properties</option>
-            {properties.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+          <div className="flex space-x-2 mb-4">
+            <select
+              value={filterProp}
+              onChange={(e) => setFilterProp(e.target.value)}
+              className="border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+            >
+              <option value="">All Properties</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value)}
+              className="border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+            >
+              <option value="">All Time</option>
+              <option value="week">Last Week</option>
+              <option value="month">Last Month</option>
+              <option value="2months">Last 2 Months</option>
+              <option value="6months">Last 6 Months</option>
+            </select>
+          </div>
 
           {requests
             .filter((r) => (filterProp ? r.property_id === filterProp : true))
+            .filter((r) => {
+              if (!timeFilter) return true;
+              const created = r.created_at?.seconds ? r.created_at.seconds * 1000 : null;
+              if (!created) return false;
+              const diff = Date.now() - created;
+              if (timeFilter === 'week') return diff <= 7 * 24 * 60 * 60 * 1000;
+              if (timeFilter === 'month') return diff <= 30 * 24 * 60 * 60 * 1000;
+              if (timeFilter === '2months') return diff <= 60 * 24 * 60 * 60 * 1000;
+              if (timeFilter === '6months') return diff <= 180 * 24 * 60 * 60 * 1000;
+              return true;
+            })
             .map((r) => (
             <div key={r.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-xl transition cursor-pointer" onClick={() => setActiveReq(r)}>
               <h3 className="font-medium">{r.title}</h3>

@@ -26,6 +26,7 @@ export default function MaintenancePage() {
   const [firstName, setFirstName] = useState('');
   const [properties, setProperties] = useState([]);
   const [filterProp, setFilterProp] = useState('');
+  const [timeFilter, setTimeFilter] = useState('');
   const [tab, setTab] = useState('Open');
   const [activeReq, setActiveReq] = useState(null);
   const [updateText, setUpdateText] = useState('');
@@ -227,6 +228,17 @@ export default function MaintenancePage() {
                 <option key={p.id} value={p.name}>{p.name}</option>
               ))}
             </select>
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value)}
+              className="border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+            >
+              <option value="">All Time</option>
+              <option value="week">Last Week</option>
+              <option value="month">Last Month</option>
+              <option value="2months">Last 2 Months</option>
+              <option value="6months">Last 6 Months</option>
+            </select>
             <div className="flex space-x-2">
               {['Open', 'In Progress', 'Resolved'].map((t) => (
                 <button
@@ -241,6 +253,17 @@ export default function MaintenancePage() {
           </div>
           {requests
             .filter((r) => (filterProp ? r.propertyName === filterProp : true))
+            .filter((r) => {
+              if (!timeFilter) return true;
+              const created = r.created_at?.seconds ? r.created_at.seconds * 1000 : null;
+              if (!created) return false;
+              const diff = Date.now() - created;
+              if (timeFilter === 'week') return diff <= 7 * 24 * 60 * 60 * 1000;
+              if (timeFilter === 'month') return diff <= 30 * 24 * 60 * 60 * 1000;
+              if (timeFilter === '2months') return diff <= 60 * 24 * 60 * 60 * 1000;
+              if (timeFilter === '6months') return diff <= 180 * 24 * 60 * 60 * 1000;
+              return true;
+            })
             .filter((r) => r.status === tab)
             .map((r) => (
               <div
