@@ -7,13 +7,20 @@ import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import { auth, db, messaging } from './firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
+import easyLeaseLogo from './EasyLease Logo.png';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <AuthProvider>
     <App />
-  </AuthProvider>
+  </AuthProvider>,
 );
+
+document.title = 'EasyLease';
+const favicon = document.getElementById('favicon');
+if (favicon) {
+  favicon.href = easyLeaseLogo;
+}
 
 serviceWorkerRegistration.register();
 
