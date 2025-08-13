@@ -44,7 +44,7 @@ export default function AnalyticsPage() {
   const [expenseChartData, setExpenseChartData] = useState(null);
   const [occupancyChartData, setOccupancyChartData] = useState(null);
   const [rentMonthly, setRentMonthly] = useState({});
-  const [monthFilter, setMonthFilter] = useState('');
+  const [timeFilter, setTimeFilter] = useState('6m');
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/signin');
@@ -152,7 +152,33 @@ export default function AnalyticsPage() {
     const keys = Object.keys(rentMonthly).sort(
       (a, b) => new Date(`${a}-01`) - new Date(`${b}-01`)
     );
-    const filtered = monthFilter ? keys.filter((k) => k === monthFilter) : keys;
+    let filtered = keys;
+    if (timeFilter) {
+      const now = new Date();
+      const start = new Date(now);
+      switch (timeFilter) {
+        case '1w':
+          start.setDate(start.getDate() - 7);
+          break;
+        case '1m':
+          start.setMonth(start.getMonth() - 1);
+          break;
+        case '2m':
+          start.setMonth(start.getMonth() - 2);
+          break;
+        case '6m':
+          start.setMonth(start.getMonth() - 6);
+          break;
+        default:
+          break;
+      }
+      filtered = keys.filter((k) => {
+        const [y, m] = k.split('-');
+        const monthStart = new Date(y, m - 1);
+        const monthEnd = new Date(y, m - 1 + 1);
+        return monthEnd > start;
+      });
+    }
     if (filtered.length) {
       const labels = filtered.map((k) => {
         const [y, m] = k.split('-');
@@ -190,7 +216,7 @@ export default function AnalyticsPage() {
       setRentChartData(null);
       setMetrics((m) => ({ ...m, rentRate: 0 }));
     }
-  }, [rentMonthly, monthFilter]);
+  }, [rentMonthly, timeFilter]);
 
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
@@ -238,13 +264,17 @@ export default function AnalyticsPage() {
         <div className="flex-1 p-6 overflow-y-auto">
           <h2 className="text-2xl font-bold mb-8">Analytics</h2>
           <div className="mb-6">
-            <label className="mr-2">Filter by month:</label>
-            <input
-              type="month"
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
+            <label className="mr-2">Time range:</label>
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value)}
               className="border rounded p-2 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700"
-            />
+            >
+              <option value="1w">Last Week</option>
+              <option value="1m">Last Month</option>
+              <option value="2m">Last 2 Months</option>
+              <option value="6m">Last 6 Months</option>
+            </select>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <MetricCard title="Properties" value={metrics.properties} />
