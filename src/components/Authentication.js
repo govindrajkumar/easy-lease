@@ -8,7 +8,7 @@ function AuthPage() {
   const { darkMode } = useTheme();
   const [mode, setMode] = useState('signin'); // 'signin' or 'signup'
   const [form, setForm] = useState({
-    role: 'landlord',
+    role: 'tenant',
     name: '',
     email: '',
     password: '',
