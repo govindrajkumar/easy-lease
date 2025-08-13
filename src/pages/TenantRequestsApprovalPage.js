@@ -1,7 +1,7 @@
 // TenantRequestsApprovalPage.js
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebase';
+import { auth, db, storage } from '../firebase';
 import {
   collection,
   query,
@@ -14,6 +14,7 @@ import {
   serverTimestamp,
   arrayUnion,
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import MobileNav from '../components/MobileNav';
 import { landlordNavItems } from '../constants/navItems';
 
@@ -108,32 +109,78 @@ export default function TenantRequestsApprovalPage() {
     }
   };
 
+  const createLeaseRecord = async () => {
+    const leaseDoc = await addDoc(collection(db, 'Leases'), {
+      tenant_uid: selectedRequest.tenant_uid,
+      property_id: selectedPropertyId,
+      rent_amount: leaseDetails.rent,
+      start_date: leaseDetails.startDate,
+      end_date: leaseDetails.endDate,
+      security_deposit: leaseDetails.deposit,
+      created_at: serverTimestamp(),
+    });
+    await addDoc(collection(db, 'RentPayments'), {
+      tenant_uid: selectedRequest.tenant_uid,
+      landlord_uid: user.uid,
+      property_id: selectedPropertyId,
+      amount: leaseDetails.rent,
+      due_date: leaseDetails.startDate,
+      paid: false,
+      created_at: serverTimestamp(),
+    });
+    return leaseDoc.id;
+  };
+
+  const openSignModal = async (leaseId, tenantUid) => {
+    try {
+      const res = await fetch(`/api/leases/${leaseId}/sign-url`);
+      const { signUrl } = await res.json();
+      if (window.HelloSign) {
+        window.HelloSign.open(signUrl, {
+          allowCancel: true,
+          messageListener: async (event) => {
+            if (event.event === 'signing_complete') {
+              try {
+                const fileRes = await fetch(`/api/leases/${leaseId}/file`);
+                const blob = await fileRes.blob();
+                const storageRef = ref(storage, `leases/${tenantUid}/${leaseId}.pdf`);
+                await uploadBytes(storageRef, blob);
+                const url = await getDownloadURL(storageRef);
+                await updateDoc(doc(db, 'Leases', leaseId), {
+                  signed_agreement_url: url,
+                });
+              } catch (err) {
+                console.error('Failed to upload signed lease', err);
+              }
+            }
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to open signing modal', err);
+    }
+  };
+
   const handleSaveLease = async () => {
     if (!selectedRequest || !selectedPropertyId) return;
     try {
-      await addDoc(collection(db, 'Leases'), {
-        tenant_uid: selectedRequest.tenant_uid,
-        property_id: selectedPropertyId,
-        rent_amount: leaseDetails.rent,
-        start_date: leaseDetails.startDate,
-        end_date: leaseDetails.endDate,
-        security_deposit: leaseDetails.deposit,
-        created_at: serverTimestamp(),
-      });
-      // create initial rent payment record
-      await addDoc(collection(db, 'RentPayments'), {
-        tenant_uid: selectedRequest.tenant_uid,
-        landlord_uid: user.uid,
-        property_id: selectedPropertyId,
-        amount: leaseDetails.rent,
-        due_date: leaseDetails.startDate,
-        paid: false,
-        created_at: serverTimestamp(),
-      });
+      await createLeaseRecord();
       setShowLeaseModal(false);
     } catch (e) {
       console.error('Failed to save lease', e);
       alert('Failed to save lease details');
+    }
+  };
+
+  const handleSignLease = async () => {
+    if (!selectedRequest || !selectedPropertyId) return;
+    try {
+      const leaseId = await createLeaseRecord();
+      setShowLeaseModal(false);
+      await openSignModal(leaseId, selectedRequest.tenant_uid);
+    } catch (e) {
+      console.error('Failed to sign lease', e);
+      alert('Failed to sign lease');
     }
   };
 
@@ -294,6 +341,12 @@ export default function TenantRequestsApprovalPage() {
                 onClick={handleSaveLease}
               >
                 Save
+              </button>
+              <button
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                onClick={handleSignLease}
+              >
+                Sign Lease
               </button>
             </div>
           </div>
