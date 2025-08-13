@@ -11,6 +11,7 @@ import {
   getDocs,
   query,
   where,
+  onSnapshot,
 } from 'firebase/firestore';
 
 export default function LandlordDashboard() {
@@ -133,45 +134,42 @@ export default function LandlordDashboard() {
 
   useEffect(() => {
     if (!user) return;
-    const fetchPayments = async () => {
-      try {
-        const snap = await getDocs(
-          query(collection(db, 'RentPayments'), where('landlord_uid', '==', user.uid))
-        );
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        let collected = 0;
-        let due = 0;
-        let late = 0;
-        const now = new Date();
-        data.forEach((p) => {
-          const amt = parseFloat(p.amount);
-          if (p.paid) collected += amt;
-          else {
-            due += amt;
-            if (new Date(p.due_date) < now) late += 1;
-          }
-        });
-        const upcoming = data
-          .filter((p) => !p.paid)
-          .map((p) => ({ ...p, dueDate: new Date(p.due_date) }))
-          .filter((p) => p.dueDate >= now)
-          .sort((a, b) => a.dueDate - b.dueDate)
-          .slice(0, 4)
-          .map((p) => ({
-            id: p.id,
-            property: propertyMap[p.property_id] || 'Unknown',
-            dueDate: p.dueDate,
-            amount: p.amount,
-          }));
-        setUpcomingPayments(upcoming);
-        setRentCollected(collected);
-        setRentDue(due);
-        setLatePayments(late);
-      } catch (e) {
-        console.error('Failed to fetch payments', e);
-      }
-    };
-    fetchPayments();
+    const q = query(
+      collection(db, 'RentPayments'),
+      where('landlord_uid', '==', user.uid)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      let collected = 0;
+      let due = 0;
+      let late = 0;
+      const now = new Date();
+      data.forEach((p) => {
+        const amt = parseFloat(p.amount);
+        if (p.paid) collected += amt;
+        else {
+          due += amt;
+          if (new Date(p.due_date) < now) late += 1;
+        }
+      });
+      const upcoming = data
+        .filter((p) => !p.paid)
+        .map((p) => ({ ...p, dueDate: new Date(p.due_date) }))
+        .filter((p) => p.dueDate >= now)
+        .sort((a, b) => a.dueDate - b.dueDate)
+        .slice(0, 4)
+        .map((p) => ({
+          id: p.id,
+          property: propertyMap[p.property_id] || 'Unknown',
+          dueDate: p.dueDate,
+          amount: p.amount,
+        }));
+      setUpcomingPayments(upcoming);
+      setRentCollected(collected);
+      setRentDue(due);
+      setLatePayments(late);
+    });
+    return () => unsub();
   }, [user, propertyMap]);
 
   const handleLogout = async () => {

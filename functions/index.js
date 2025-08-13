@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 admin.initializeApp();
 
@@ -41,3 +42,30 @@ exports.sendMonthlyRentReminders = functions.pubsub
     await batch.commit();
     console.log(`Processed ${paymentsSnap.size} payments`);
   });
+
+exports.createCheckoutSession = functions.https.onCall(async (data, context) => {
+  const { amount, paymentId, successUrl, cancelUrl } = data;
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: { name: 'Rent Payment' },
+            unit_amount: Math.round(amount * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: { paymentId },
+    });
+    return { id: session.id };
+  } catch (err) {
+    console.error('Stripe session creation failed', err);
+    throw new functions.https.HttpsError('internal', 'Unable to create session');
+  }
+});

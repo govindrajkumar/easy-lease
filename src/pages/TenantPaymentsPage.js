@@ -9,11 +9,16 @@ import {
   doc,
   getDoc,
   updateDoc,
+  addDoc,
   serverTimestamp,
   onSnapshot,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { loadStripe } from '@stripe/stripe-js';
 import MobileNav from '../components/MobileNav';
 import { tenantNavItems } from '../constants/navItems';
+
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 export default function TenantPaymentsPage() {
   const [payments, setPayments] = useState([]);
@@ -94,6 +99,33 @@ export default function TenantPaymentsPage() {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paidId = params.get('paidId');
+    if (paidId && user) {
+      const finalize = async () => {
+        const payRef = doc(db, 'RentPayments', paidId);
+        const snap = await getDoc(payRef);
+        if (snap.exists() && !snap.data().paid) {
+          const data = snap.data();
+          await updateDoc(payRef, { paid: true, paid_at: serverTimestamp() });
+          await addDoc(collection(db, 'PaymentHistory'), {
+            payment_id: paidId,
+            tenant_uid: data.tenant_uid,
+            landlord_uid: data.landlord_uid,
+            amount: data.amount,
+            paid_at: serverTimestamp(),
+          });
+          setPayments((prev) => prev.filter((x) => x.id !== paidId));
+          setHistory((prev) => [...prev, { id: paidId, ...data, paid: true }]);
+        }
+        params.delete('paidId');
+        window.history.replaceState({}, '', window.location.pathname);
+      };
+      finalize();
+    }
+  }, [user]);
+
+  useEffect(() => {
     let unsubMessages;
     const unsubAuth = auth.onAuthStateChanged((u) => {
       if (unsubMessages) unsubMessages();
@@ -116,14 +148,16 @@ export default function TenantPaymentsPage() {
   };
 
   const handlePay = async (p) => {
-    await updateDoc(doc(db, 'RentPayments', p.id), {
-      paid: true,
-      paid_at: serverTimestamp(),
+    const functions = getFunctions();
+    const createSession = httpsCallable(functions, 'createCheckoutSession');
+    const { data } = await createSession({
+      amount: p.amount,
+      paymentId: p.id,
+      successUrl: `${window.location.origin}/tenant-payments?paidId=${p.id}`,
+      cancelUrl: window.location.href,
     });
-    setPayments((prev) => prev.filter((x) => x.id !== p.id));
-    setHistory((prev) => [...prev, { ...p, paid: true, paid_at: new Date() }]);
-    setActivePayment(null);
-    setCcInfo({ number: '', expiry: '', cvc: '' });
+    const stripe = await stripePromise;
+    await stripe.redirectToCheckout({ sessionId: data.id });
   };
 
   return (

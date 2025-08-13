@@ -12,6 +12,7 @@ import {
   updateDoc,
   serverTimestamp,
   addDoc,
+  onSnapshot,
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
 import { landlordNavItems } from '../constants/navItems';
@@ -48,6 +49,7 @@ export default function PaymentsPage() {
 
 
   useEffect(() => {
+    let unsubPayments;
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
       setUser(u);
       if (u) {
@@ -59,28 +61,30 @@ export default function PaymentsPage() {
         const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setProperties(props);
 
-        const paySnap = await getDocs(
-          query(collection(db, 'RentPayments'), where('landlord_uid', '==', u.uid))
-        );
-        const data = await Promise.all(
-          paySnap.docs.map(async (d) => {
-            const p = d.data();
-            const prop = await getDoc(doc(db, 'Properties', p.property_id));
-            const tenant = await getDoc(doc(db, 'Users', p.tenant_uid));
-            return {
-              id: d.id,
-              propertyName: prop.exists() ? prop.data().name : '',
-              tenantName: tenant.exists() ? tenant.data().first_name : '',
-              ...p,
-            };
-          })
-        );
-        setPayments(data);
-
-        computeStats(data);
+        const q = query(collection(db, 'RentPayments'), where('landlord_uid', '==', u.uid));
+        unsubPayments = onSnapshot(q, async (paySnap) => {
+          const data = await Promise.all(
+            paySnap.docs.map(async (d) => {
+              const p = d.data();
+              const prop = await getDoc(doc(db, 'Properties', p.property_id));
+              const tenant = await getDoc(doc(db, 'Users', p.tenant_uid));
+              return {
+                id: d.id,
+                propertyName: prop.exists() ? prop.data().name : '',
+                tenantName: tenant.exists() ? tenant.data().first_name : '',
+                ...p,
+              };
+            })
+          );
+          setPayments(data);
+          computeStats(data);
+        });
       }
     });
-    return () => unsubscribe();
+    return () => {
+      if (unsubPayments) unsubPayments();
+      unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
