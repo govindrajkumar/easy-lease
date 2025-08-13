@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { auth, db, storage } from '../firebase';
@@ -6,6 +6,7 @@ import MobileNav from '../components/MobileNav';
 import { tenantNavItems } from '../constants/navItems';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import HelloSign from 'hellosign-embedded';
 
 export default function TenantDashboard() {
   const navigate = useNavigate();
@@ -23,14 +24,12 @@ export default function TenantDashboard() {
 
   const navItems = tenantNavItems({ active: 'dashboard', unread });
 
+  const helloSignClient = useRef(null);
+
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.hellosign.com/v3/hellosign.min.js';
-    script.async = true;
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
+    helloSignClient.current = new HelloSign({
+      clientId: process.env.REACT_APP_HELLOSIGN_CLIENT_ID || ''
+    });
   }, []);
 
   useEffect(() => {
@@ -148,9 +147,11 @@ export default function TenantDashboard() {
   const openSignModal = async () => {
     if (!lease) return;
     const data = await createLeaseRecord();
-    if (!data || !window.HelloSign) return;
-    const client = new window.HelloSign();
-    client.open(data.signUrl || data.sign_url, {
+    if (!data || !helloSignClient.current) {
+      alert('Unable to load signing client.');
+      return;
+    }
+    helloSignClient.current.open(data.signUrl || data.sign_url, {
       allowCancel: true,
       skipDomainVerification: true,
       messageListener: async (eventData) => {
