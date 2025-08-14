@@ -182,7 +182,11 @@ export default function TenantDashboard() {
             }
           };
           hs.on('sign', handleSign);
-          hs.open({ url: signUrl, clientId: HELLOSIGN_CLIENT_ID });
+          hs.open({
+            url: signUrl,
+            clientId: HELLOSIGN_CLIENT_ID,
+            skipDomainVerification: true,
+          });
         } else {
           // Fallback in case the HelloSign embedded library fails to load.
           // Opening the signing URL directly requires the client ID to be
@@ -191,7 +195,7 @@ export default function TenantDashboard() {
           // postMessage with an empty origin. Append the client_id so that the
           // signing page can initialise correctly even without the embedded
           // script.
-          const directUrl = `${signUrl}&client_id=${HELLOSIGN_CLIENT_ID}`;
+          const directUrl = `${signUrl}&client_id=${HELLOSIGN_CLIENT_ID}&skip_domain_verification=1`;
           window.open(directUrl, '_blank');
         }
       };
