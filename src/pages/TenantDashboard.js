@@ -184,7 +184,15 @@ export default function TenantDashboard() {
           hs.on('sign', handleSign);
           hs.open({ url: signUrl, clientId: HELLOSIGN_CLIENT_ID });
         } else {
-          window.open(signUrl, '_blank');
+          // Fallback in case the HelloSign embedded library fails to load.
+          // Opening the signing URL directly requires the client ID to be
+          // provided as a query parameter, otherwise HelloSign responds with a
+          // "Missing parameter: client_id" error and the iframe attempts to
+          // postMessage with an empty origin. Append the client_id so that the
+          // signing page can initialise correctly even without the embedded
+          // script.
+          const directUrl = `${signUrl}&client_id=${HELLOSIGN_CLIENT_ID}`;
+          window.open(directUrl, '_blank');
         }
       };
 
