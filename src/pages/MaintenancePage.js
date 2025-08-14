@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
 import { landlordNavItems } from '../constants/navItems';
+import AlertModal from '../components/AlertModal';
 
 export default function MaintenancePage() {
   const [requests, setRequests] = useState([]);
@@ -32,6 +33,8 @@ export default function MaintenancePage() {
   const [expense, setExpense] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({ property_id: '', title: '', details: '' });
+  const [statusChoice, setStatusChoice] = useState('Open');
+  const [alertMessage, setAlertMessage] = useState('');
   const { darkMode } = useTheme();
   const navigate = useNavigate();
 
@@ -136,7 +139,7 @@ export default function MaintenancePage() {
         read: false,
       });
     setMessageMap((prev) => ({ ...prev, [id]: '' }));
-    alert('Message sent');
+    setAlertMessage('Message sent');
   };
 
   const submitRequest = async (e) => {
@@ -249,6 +252,7 @@ export default function MaintenancePage() {
                 onClick={() => {
                   setActiveReq(r);
                   setExpense(r.expense || '');
+                  setStatusChoice(r.status);
                 }}
               >
                 <div className="flex justify-between items-start">
@@ -330,8 +334,10 @@ export default function MaintenancePage() {
             <h3 className="text-lg font-medium">{activeReq.title}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">{activeReq.tenantName} – {activeReq.propertyName}</p>
             <p>{activeReq.details}</p>
-            <p className="text-sm">Status: {activeReq.status}</p>
-            {activeReq.expense && <p className="text-sm">Expense: ${activeReq.expense}</p>}
+            <p className="text-sm">Status: {statusChoice}</p>
+            {activeReq.expense && statusChoice !== 'Resolved' && (
+              <p className="text-sm">Expense: ${activeReq.expense}</p>
+            )}
             <div className="max-h-40 overflow-y-auto space-y-1 border-t pt-2">
               {(activeReq.updates || []).map((u, i) => (
                 <div key={i} className="text-sm">
@@ -349,26 +355,46 @@ export default function MaintenancePage() {
               />
               <button className="px-4 py-2 bg-purple-600 text-white rounded w-full" onClick={addUpdate}>Add Update</button>
               <select
-                value={activeReq.status}
-                onChange={(e) => { setActiveReq({ ...activeReq, status: e.target.value }); updateStatus(activeReq.id, e.target.value); }}
+                value={statusChoice}
+                onChange={(e) => setStatusChoice(e.target.value)}
                 className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
               >
                 {['Open', 'In Progress', 'Resolved'].map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
-              {activeReq.status === 'Resolved' && (
+              {statusChoice === 'Resolved' && (
                 <input
                   type="number"
                   className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
                   placeholder="Expense"
                   value={expense}
-                  onChange={(e) => { setExpense(e.target.value); updateStatus(activeReq.id, 'Resolved', e.target.value); }}
+                  onChange={(e) => setExpense(e.target.value)}
                 />
               )}
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 rounded"
+                  onClick={() => setActiveReq(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 bg-green-600 text-white rounded"
+                  onClick={() => {
+                    updateStatus(activeReq.id, statusChoice, statusChoice === 'Resolved' ? expense : undefined);
+                    setActiveReq(null);
+                  }}
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
+      {alertMessage && (
+        <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
       )}
     </div>
   );
