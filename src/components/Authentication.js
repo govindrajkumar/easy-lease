@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import ThemeToggle from './ThemeToggle';
+import AlertModal from './AlertModal';
 import '../index.css'; // Assuming you'll move the CSS here or use Tailwind CSS directly
 
 function AuthPage() {
@@ -18,7 +19,7 @@ function AuthPage() {
     landlordEmail: '',
   });
   const [showPass, setShowPass] = useState(false);
-
+  const [alertMessage, setAlertMessage] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -30,17 +31,17 @@ function AuthPage() {
 
   const handleSignInSubmit = (e) => {
     e.preventDefault();
-    alert('Signed in!');
+    setAlertMessage('Signed in!');
     window.location.href = 'tenant_dashboard_js_modal_updated.html';
   };
 
   const handleSignUpSubmit = (e) => {
     e.preventDefault();
     if (form.password !== form.confirm) {
-      alert('Passwords do not match');
+      setAlertMessage('Passwords do not match');
       return;
     }
-    alert(`Account created as ${form.role}!`);
+    setAlertMessage(`Account created as ${form.role}!`);
     window.location.href = 'tenant_dashboard_js_modal_updated.html';
   };
 
@@ -237,6 +238,7 @@ function AuthPage() {
             )}
           </div>
         </main>
+        <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
       </body>
     </div>
   );

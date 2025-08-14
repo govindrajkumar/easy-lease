@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import MobileNav from '../components/MobileNav';
 import { tenantNavItems } from '../constants/navItems';
 import ProfileModal from '../components/ProfileModal';
+import AlertModal from '../components/AlertModal';
 
 export default function TenantSettingsPage() {
   const [tab, setTab] = useState('profile');
@@ -18,6 +19,7 @@ export default function TenantSettingsPage() {
   const { darkMode, toggleDarkMode } = useTheme();
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
   const [notifications, setNotifications] = useState({
     email: true,
@@ -81,7 +83,7 @@ export default function TenantSettingsPage() {
 
 
   const saveAll = () => {
-    alert('Settings saved');
+    setAlertMessage('Settings saved');
   };
 
   const toggleStripe = () => {
@@ -109,9 +111,9 @@ export default function TenantSettingsPage() {
       if (password) {
         await updatePassword(auth.currentUser, password);
       }
-      alert('Profile updated');
+      setAlertMessage('Profile updated');
     } catch (e) {
-      alert('Failed to update profile');
+      setAlertMessage('Failed to update profile');
     }
   };
   const handleLogout = async () => {
@@ -271,6 +273,7 @@ export default function TenantSettingsPage() {
           onClose={() => setShowModal(false)}
         />
       )}
+      <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
     </div>
   );
 }

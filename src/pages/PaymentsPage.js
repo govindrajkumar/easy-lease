@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
 import { landlordNavItems } from '../constants/navItems';
+import AlertModal from '../components/AlertModal';
 
 export default function PaymentsPage() {
   const [firstName, setFirstName] = useState('');
@@ -27,6 +28,7 @@ export default function PaymentsPage() {
   const [latePayments, setLatePayments] = useState(0);
   const { darkMode } = useTheme();
   const navigate = useNavigate();
+  const [alertMessage, setAlertMessage] = useState('');
 
   const computeStats = (list) => {
     let collected = 0;
@@ -111,7 +113,7 @@ export default function PaymentsPage() {
       landlord_uid: user.uid,
       created_at: serverTimestamp(),
     });
-    alert('Reminder sent');
+    setAlertMessage('Reminder sent');
   };
 
   return (
@@ -231,6 +233,7 @@ export default function PaymentsPage() {
           </div>
         </div>
       </div>
+      <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
     </div>
   );
 }

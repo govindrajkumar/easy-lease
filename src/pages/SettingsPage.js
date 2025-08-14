@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import MobileNav from '../components/MobileNav';
 import { landlordNavItems } from '../constants/navItems';
 import ProfileModal from '../components/ProfileModal';
+import AlertModal from '../components/AlertModal';
 
 export default function SettingsPage() {
   const [tab, setTab] = useState('profile');
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const [firstName, setFirstName] = useState('');
   const { darkMode, toggleDarkMode } = useTheme();
   const [showModal, setShowModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
   const [notifications, setNotifications] = useState({
     email: true,
@@ -59,7 +61,7 @@ export default function SettingsPage() {
 
 
   const saveAll = () => {
-    alert('Settings saved');
+    setAlertMessage('Settings saved');
   };
 
   const toggleStripe = () => {
@@ -87,9 +89,9 @@ export default function SettingsPage() {
       if (password) {
         await updatePassword(auth.currentUser, password);
       }
-      alert('Profile updated');
+      setAlertMessage('Profile updated');
     } catch (e) {
-      alert('Failed to update profile');
+      setAlertMessage('Failed to update profile');
     }
   };
   const handleLogout = async () => {
@@ -252,6 +254,7 @@ export default function SettingsPage() {
           onClose={() => setShowModal(false)}
         />
       )}
+      <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
     </div>
   );
 }
