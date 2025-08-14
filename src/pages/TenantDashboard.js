@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { auth, db, storage } from '../firebase';
+import { auth, db, storage, functions } from '../firebase';
 import MobileNav from '../components/MobileNav';
 import { tenantNavItems } from '../constants/navItems';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { httpsCallable } from 'firebase/functions';
 
 export default function TenantDashboard() {
   const navigate = useNavigate();
@@ -29,29 +30,19 @@ export default function TenantDashboard() {
 
   const navItems = tenantNavItems({ active: 'dashboard', unread, unreadMessages });
 
-  // Downloads the signed PDF from HelloSign and uploads it to Firebase Storage.
-  // Retries fetching the file URL a few times since HelloSign may need time
-  // to generate the final document.
+  // Downloads the signed PDF from HelloSign via a Cloud Function and uploads it to Firebase Storage.
   const saveSignedAgreement = async (signatureRequestId) => {
-    const fetchFileUrl = async (retries = 5) => {
-      for (let attempt = 0; attempt < retries; attempt++) {
-        const fileResp = await fetch(
-          `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf&get_url=1`,
-          { headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') } }
-        );
-        if (fileResp.ok) {
-          const json = await fileResp.json();
-          if (json.file_url) return json.file_url;
-        }
-        await new Promise((res) => setTimeout(res, 3000));
-      }
-      throw new Error('Signed file not available yet');
-    };
-
     try {
-      const fileUrl = await fetchFileUrl();
-      const pdfResp = await fetch(fileUrl);
-      const blob = await pdfResp.blob();
+      const fetchPdf = httpsCallable(functions, 'fetchSignedPdf');
+      const resp = await fetchPdf({ signatureRequestId });
+      const base64 = resp.data.base64;
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
       const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
       await uploadBytes(fileRef, blob, { contentType: 'application/pdf' });
       const url = await getDownloadURL(fileRef);

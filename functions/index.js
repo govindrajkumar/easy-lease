@@ -4,6 +4,7 @@ const admin = require('firebase-admin');
 admin.initializeApp();
 
 const db = admin.firestore();
+const HELLOSIGN_API_KEY = 'f91934661f9c4374956ba03c3d2997ad15835e9e250f68ddccbe903dd1ec3344';
 
 async function sendNotificationToUsers(userIds, title, body) {
   const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
@@ -92,3 +93,26 @@ exports.notifyMessageCreated = functions.firestore
       data.text || 'You have a new message.'
     );
   });
+
+exports.fetchSignedPdf = functions.https.onCall(async (data) => {
+  const { signatureRequestId } = data || {};
+  if (!signatureRequestId) {
+    throw new functions.https.HttpsError('invalid-argument', 'signatureRequestId is required');
+  }
+  const resp = await fetch(
+    `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf`,
+    {
+      headers: {
+        Authorization: 'Basic ' + Buffer.from(HELLOSIGN_API_KEY + ':').toString('base64'),
+      },
+    }
+  );
+  if (!resp.ok) {
+    const txt = await resp.text();
+    console.error('HelloSign fetch failed', txt);
+    throw new functions.https.HttpsError('failed-precondition', 'Unable to fetch signed PDF');
+  }
+  const arrayBuffer = await resp.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString('base64');
+  return { base64 };
+});
