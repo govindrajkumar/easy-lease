@@ -158,13 +158,17 @@ export default function TenantDashboard() {
 
       const openHelloSign = () => {
         if (window && window.HelloSign && window.HelloSign.open) {
-          window.HelloSign.open({ url: signUrl, clientId: HELLOSIGN_CLIENT_ID });
-          window.HelloSign.on('sign', async () => {
+          const hs = window.HelloSign;
+          const handleSign = async () => {
             try {
-              const fileResp = await fetch(`https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf`, {
-                headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') },
-              });
-              const blob = await fileResp.blob();
+              const fileResp = await fetch(
+                `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf&get_url=1`,
+                { headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') } }
+              );
+              if (!fileResp.ok) throw new Error('Failed to fetch signed file');
+              const { file_url: fileUrl } = await fileResp.json();
+              const pdfResp = await fetch(fileUrl);
+              const blob = await pdfResp.blob();
               const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
               await uploadBytes(fileRef, blob);
               const url = await getDownloadURL(fileRef);
@@ -173,8 +177,12 @@ export default function TenantDashboard() {
               setUploadMessage('Agreement signed successfully.');
             } catch (err) {
               console.error('Failed to save signed agreement', err);
+            } finally {
+              hs.off('sign', handleSign);
             }
-          });
+          };
+          hs.on('sign', handleSign);
+          hs.open({ url: signUrl, clientId: HELLOSIGN_CLIENT_ID });
         } else {
           window.open(signUrl, '_blank');
         }
