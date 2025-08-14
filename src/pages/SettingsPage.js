@@ -47,7 +47,8 @@ export default function SettingsPage() {
           if (snap.exists()) {
             const data = snap.data();
             setFirstName(data.first_name || '');
-            setProfile((prev) => ({ ...prev, name: data.first_name || '', email: u.email || '' }));
+            const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ');
+            setProfile((prev) => ({ ...prev, name: fullName, email: u.email || '' }));
           } else {
             setProfile((prev) => ({ ...prev, email: u.email || '' }));
           }
@@ -81,10 +82,16 @@ export default function SettingsPage() {
 
   const handleProfileSave = async ({ name, password }) => {
     try {
-      if (name !== profile.name) {
-        await updateDoc(doc(db, 'Users', auth.currentUser.uid), { first_name: name });
-        setProfile(prev => ({ ...prev, name }));
-        setFirstName(name);
+      const trimmed = name.trim();
+      const [first, ...rest] = trimmed.split(' ');
+      const last = rest.join(' ');
+      if (trimmed !== profile.name) {
+        await updateDoc(doc(db, 'Users', auth.currentUser.uid), {
+          first_name: first,
+          last_name: last,
+        });
+        setProfile(prev => ({ ...prev, name: trimmed }));
+        setFirstName(first);
       }
       if (password) {
         await updatePassword(auth.currentUser, password);
