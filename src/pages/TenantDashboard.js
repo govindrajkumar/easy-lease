@@ -150,36 +150,41 @@ export default function TenantDashboard() {
       const signatureId = json.signature_request.signatures[0].signature_id;
       const signatureRequestId = json.signature_request.signature_request_id;
 
-      const signUrlResp = await fetch(`https://api.hellosign.com/v3/embedded/sign_url/${signatureId}`, {
-        headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') },
-      });
+      const signUrlResp = await fetch(
+        `https://api.hellosign.com/v3/embedded/sign_url/${signatureId}`,
+        { headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') } }
+      );
       const signUrlJson = await signUrlResp.json();
       const signUrl = signUrlJson.embedded.sign_url;
+
+      // Helper to download the signed PDF from HelloSign and persist it in Firebase Storage
+      const saveSignedAgreement = async () => {
+        try {
+          const fileResp = await fetch(
+            `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf&get_url=1`,
+            { headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') } }
+          );
+          if (!fileResp.ok) throw new Error('Failed to fetch signed file');
+          const { file_url: fileUrl } = await fileResp.json();
+          const pdfResp = await fetch(fileUrl);
+          const blob = await pdfResp.blob();
+          const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
+          await uploadBytes(fileRef, blob, { contentType: 'application/pdf' });
+          const url = await getDownloadURL(fileRef);
+          await updateDoc(doc(db, 'Leases', lease.id), { signed_agreement_url: url });
+          setLease((prev) => ({ ...prev, signed_agreement_url: url }));
+          setUploadMessage('Agreement signed successfully.');
+        } catch (err) {
+          console.error('Failed to save signed agreement', err);
+        }
+      };
 
       const openHelloSign = () => {
         if (window && window.HelloSign && window.HelloSign.open) {
           const hs = window.HelloSign;
           const handleSign = async () => {
-            try {
-              const fileResp = await fetch(
-                `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf&get_url=1`,
-                { headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') } }
-              );
-              if (!fileResp.ok) throw new Error('Failed to fetch signed file');
-              const { file_url: fileUrl } = await fileResp.json();
-              const pdfResp = await fetch(fileUrl);
-              const blob = await pdfResp.blob();
-              const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
-              await uploadBytes(fileRef, blob);
-              const url = await getDownloadURL(fileRef);
-              await updateDoc(doc(db, 'Leases', lease.id), { signed_agreement_url: url });
-              setLease((prev) => ({ ...prev, signed_agreement_url: url }));
-              setUploadMessage('Agreement signed successfully.');
-            } catch (err) {
-              console.error('Failed to save signed agreement', err);
-            } finally {
-              hs.off('sign', handleSign);
-            }
+            await saveSignedAgreement();
+            hs.off('sign', handleSign);
           };
           hs.on('sign', handleSign);
           hs.open({
