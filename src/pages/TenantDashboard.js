@@ -157,15 +157,28 @@ export default function TenantDashboard() {
       const signUrlJson = await signUrlResp.json();
       const signUrl = signUrlJson.embedded.sign_url;
 
-      // Helper to download the signed PDF from HelloSign and persist it in Firebase Storage
+      // Helper to download the signed PDF from HelloSign and persist it in Firebase Storage.
+      // HelloSign may need some time to process the completed document, so we
+      // retry fetching the file URL a few times before giving up.
       const saveSignedAgreement = async () => {
+        const fetchFileUrl = async (retries = 5) => {
+          for (let attempt = 0; attempt < retries; attempt++) {
+            const fileResp = await fetch(
+              `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf&get_url=1`,
+              { headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') } }
+            );
+            if (fileResp.ok) {
+              const json = await fileResp.json();
+              if (json.file_url) return json.file_url;
+            }
+            // Wait a few seconds before trying again so HelloSign can finish processing.
+            await new Promise((res) => setTimeout(res, 3000));
+          }
+          throw new Error('Signed file not available yet');
+        };
+
         try {
-          const fileResp = await fetch(
-            `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf&get_url=1`,
-            { headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') } }
-          );
-          if (!fileResp.ok) throw new Error('Failed to fetch signed file');
-          const { file_url: fileUrl } = await fileResp.json();
+          const fileUrl = await fetchFileUrl();
           const pdfResp = await fetch(fileUrl);
           const blob = await pdfResp.blob();
           const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
@@ -176,6 +189,7 @@ export default function TenantDashboard() {
           setUploadMessage('Agreement signed successfully.');
         } catch (err) {
           console.error('Failed to save signed agreement', err);
+          setUploadMessage('Failed to save signed agreement.');
         }
       };
 
