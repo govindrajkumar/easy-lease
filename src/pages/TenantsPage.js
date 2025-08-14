@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
 import { landlordNavItems } from '../constants/navItems';
+import AlertModal from '../components/AlertModal';
 
 export default function TenantsPage() {
   const [tenants, setTenants] = useState([]);
@@ -40,6 +41,7 @@ export default function TenantsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTenant, setEditTenant] = useState(null);
   const [editForm, setEditForm] = useState({ first_name: '', last_name: '', email: '' });
+  const [alertMessage, setAlertMessage] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -147,7 +149,7 @@ export default function TenantsPage() {
         landlord_uid: user.uid,
         created_at: serverTimestamp(),
       });
-      alert('Reminder sent');
+      setAlertMessage('Reminder sent');
     } catch (e) {
       console.error('Failed to send reminder', e);
     }
@@ -166,7 +168,7 @@ export default function TenantsPage() {
       await updateDoc(doc(db, 'Users', selectedRequest.tenant_uid), { status: 'Active' });
       const prop = properties.find((p) => p.id === selectedPropertyId);
       if (prop && (prop.tenants || []).length >= 4) {
-        alert('This property already has the maximum number of tenants.');
+        setAlertMessage('This property already has the maximum number of tenants.');
         setAssignLoading(false);
         return;
       }
@@ -207,7 +209,7 @@ export default function TenantsPage() {
       setShowLeaseModal(false);
     } catch (e) {
       console.error('Failed to save lease', e);
-      alert('Failed to save lease details');
+      setAlertMessage('Failed to save lease details');
     }
   };
 
@@ -520,6 +522,7 @@ export default function TenantsPage() {
           </div>
         </div>
       )}
+      <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
     </div>
   );
 }

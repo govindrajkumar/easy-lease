@@ -7,6 +7,7 @@ import { tenantNavItems } from '../constants/navItems';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
+import AlertModal from '../components/AlertModal
 
 export default function TenantDashboard() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function TenantDashboard() {
   const [uploadMessage, setUploadMessage] = useState('');
   const [unread, setUnread] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [alertMessage, setAlertMessage] = useState('');
 
   const HELLOSIGN_API_KEY =
     'f91934661f9c4374956ba03c3d2997ad15835e9e250f68ddccbe903dd1ec3344';
@@ -244,7 +246,7 @@ export default function TenantDashboard() {
       setStatus('Pending');
     } catch (err) {
       console.error('Error sending request:', err);
-      alert('Failed to send request. Please try again.');
+      setAlertMessage('Failed to send request. Please try again.');
     } finally {
       setSendingRequest(false);
     }
@@ -436,8 +438,9 @@ export default function TenantDashboard() {
               </div>
             </div>
           </main>
-        </div>
       </div>
+      </div>
+      <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
     </div>
   );
 }

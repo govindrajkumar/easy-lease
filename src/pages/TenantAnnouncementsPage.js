@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import MobileNav from '../components/MobileNav';
 import ChatBubble from '../components/ChatBubble';
+import AlertModal from '../components/AlertModal';
 import { tenantNavItems } from '../constants/navItems';
 import {
   collection,
@@ -30,6 +31,7 @@ export default function TenantAnnouncementsPage() {
   const [messagesMap, setMessagesMap] = useState({});
   const messageUnsubs = useRef({});
   const navigate = useNavigate();
+  const [alertMessage, setAlertMessage] = useState('');
 
   const navItems = tenantNavItems({ active: 'announcements', unreadMessages });
 
@@ -104,7 +106,7 @@ export default function TenantAnnouncementsPage() {
       read: false,
     });
     setReplyMap({ ...replyMap, [id]: '' });
-    alert('Reply sent');
+    setAlertMessage('Reply sent');
   };
 
   const toggleAnnouncement = async (id) => {
@@ -231,6 +233,7 @@ export default function TenantAnnouncementsPage() {
           )}
         </div>
       </div>
+      <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
     </div>
   );
 }

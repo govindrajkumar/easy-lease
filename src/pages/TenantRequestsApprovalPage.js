@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
 import { landlordNavItems } from '../constants/navItems';
+import AlertModal from '../components/AlertModal';
 
 export default function TenantRequestsApprovalPage() {
   const [requests, setRequests] = useState([]);
@@ -33,6 +34,7 @@ export default function TenantRequestsApprovalPage() {
     endDate: '',
     deposit: '',
   });
+  const [alertMessage, setAlertMessage] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -91,7 +93,7 @@ export default function TenantRequestsApprovalPage() {
       await updateDoc(doc(db, 'Users', selectedRequest.tenant_uid), { status: 'Active' });
       const prop = properties.find((p) => p.id === selectedPropertyId);
       if (prop && (prop.tenants || []).length >= 4) {
-        alert('This property already has the maximum number of tenants.');
+        setAlertMessage('This property already has the maximum number of tenants.');
         setAssignLoading(false);
         return;
       }
@@ -133,7 +135,7 @@ export default function TenantRequestsApprovalPage() {
       setShowLeaseModal(false);
     } catch (e) {
       console.error('Failed to save lease', e);
-      alert('Failed to save lease details');
+      setAlertMessage('Failed to save lease details');
     }
   };
 
@@ -299,6 +301,7 @@ export default function TenantRequestsApprovalPage() {
           </div>
         </div>
       )}
+      <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
     </div>
   );
 }

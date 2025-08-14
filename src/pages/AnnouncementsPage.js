@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
 import ChatBubble from '../components/ChatBubble';
+import AlertModal from '../components/AlertModal';
 import { landlordNavItems } from '../constants/navItems';
 
 export default function AnnouncementsPage() {
@@ -35,6 +36,7 @@ export default function AnnouncementsPage() {
   const [replyMap, setReplyMap] = useState({});
   const [unreadMessages, setUnreadMessages] = useState(0);
   const messageUnsubs = useRef({});
+  const [alertMessage, setAlertMessage] = useState('');
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -114,7 +116,7 @@ export default function AnnouncementsPage() {
       )
     );
     setReplyMap((prev) => ({ ...prev, [id]: '' }));
-    alert('Reply sent');
+    setAlertMessage('Reply sent');
   };
 
   useEffect(() => {
@@ -378,6 +380,7 @@ export default function AnnouncementsPage() {
           </div>
         </div>
       </div>
+      <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
     </div>
   );
 }
