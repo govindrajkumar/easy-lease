@@ -29,6 +29,41 @@ export default function TenantDashboard() {
 
   const navItems = tenantNavItems({ active: 'dashboard', unread, unreadMessages });
 
+  // Downloads the signed PDF from HelloSign and uploads it to Firebase Storage.
+  // Retries fetching the file URL a few times since HelloSign may need time
+  // to generate the final document.
+  const saveSignedAgreement = async (signatureRequestId) => {
+    const fetchFileUrl = async (retries = 5) => {
+      for (let attempt = 0; attempt < retries; attempt++) {
+        const fileResp = await fetch(
+          `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf&get_url=1`,
+          { headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') } }
+        );
+        if (fileResp.ok) {
+          const json = await fileResp.json();
+          if (json.file_url) return json.file_url;
+        }
+        await new Promise((res) => setTimeout(res, 3000));
+      }
+      throw new Error('Signed file not available yet');
+    };
+
+    try {
+      const fileUrl = await fetchFileUrl();
+      const pdfResp = await fetch(fileUrl);
+      const blob = await pdfResp.blob();
+      const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
+      await uploadBytes(fileRef, blob, { contentType: 'application/pdf' });
+      const url = await getDownloadURL(fileRef);
+      await updateDoc(doc(db, 'Leases', lease.id), { signed_agreement_url: url });
+      setLease((prev) => ({ ...prev, signed_agreement_url: url }));
+      setUploadMessage('Agreement signed successfully.');
+    } catch (err) {
+      console.error('Failed to save signed agreement', err);
+      setUploadMessage('Failed to save signed agreement.');
+    }
+  };
+
   useEffect(() => {
     const fetchUserStatus = async () => {
       const user = auth.currentUser;
@@ -109,6 +144,17 @@ export default function TenantDashboard() {
     fetchLeaseInfo();
   }, [status]);
 
+  // If the user completed signing in another tab or was redirected back to
+  // the dashboard, attempt to fetch and store the signed agreement.
+  useEffect(() => {
+    const srid = sessionStorage.getItem('hellosign_request_id');
+    if (srid && lease && !lease.signed_agreement_url) {
+      saveSignedAgreement(srid).finally(() =>
+        sessionStorage.removeItem('hellosign_request_id')
+      );
+    }
+  }, [lease]);
+
   const handleLogout = () => {
     sessionStorage.clear();
     navigate('/');
@@ -133,6 +179,7 @@ export default function TenantDashboard() {
         'file_url',
         'https://forms.mgcs.gov.on.ca/dataset/edff7620-980b-455f-9666-643196d8312f/resource/44548947-1727-4928-81df-dfc33ffd649a/download/2229e_flat.pdf',
       );
+      data.append('signing_redirect_url', `${window.location.origin}/tenant-dashboard`);
 
       const resp = await fetch('https://api.hellosign.com/v3/signature_request/create_embedded', {
         method: 'POST',
@@ -150,6 +197,8 @@ export default function TenantDashboard() {
       const signatureId = json.signature_request.signatures[0].signature_id;
       const signatureRequestId = json.signature_request.signature_request_id;
 
+      sessionStorage.setItem('hellosign_request_id', signatureRequestId);
+
       const signUrlResp = await fetch(
         `https://api.hellosign.com/v3/embedded/sign_url/${signatureId}`,
         { headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') } }
@@ -157,47 +206,11 @@ export default function TenantDashboard() {
       const signUrlJson = await signUrlResp.json();
       const signUrl = signUrlJson.embedded.sign_url;
 
-      // Helper to download the signed PDF from HelloSign and persist it in Firebase Storage.
-      // HelloSign may need some time to process the completed document, so we
-      // retry fetching the file URL a few times before giving up.
-      const saveSignedAgreement = async () => {
-        const fetchFileUrl = async (retries = 5) => {
-          for (let attempt = 0; attempt < retries; attempt++) {
-            const fileResp = await fetch(
-              `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf&get_url=1`,
-              { headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') } }
-            );
-            if (fileResp.ok) {
-              const json = await fileResp.json();
-              if (json.file_url) return json.file_url;
-            }
-            // Wait a few seconds before trying again so HelloSign can finish processing.
-            await new Promise((res) => setTimeout(res, 3000));
-          }
-          throw new Error('Signed file not available yet');
-        };
-
-        try {
-          const fileUrl = await fetchFileUrl();
-          const pdfResp = await fetch(fileUrl);
-          const blob = await pdfResp.blob();
-          const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
-          await uploadBytes(fileRef, blob, { contentType: 'application/pdf' });
-          const url = await getDownloadURL(fileRef);
-          await updateDoc(doc(db, 'Leases', lease.id), { signed_agreement_url: url });
-          setLease((prev) => ({ ...prev, signed_agreement_url: url }));
-          setUploadMessage('Agreement signed successfully.');
-        } catch (err) {
-          console.error('Failed to save signed agreement', err);
-          setUploadMessage('Failed to save signed agreement.');
-        }
-      };
-
       const openHelloSign = () => {
         if (window && window.HelloSign && window.HelloSign.open) {
           const hs = window.HelloSign;
           const handleSign = async () => {
-            await saveSignedAgreement();
+            await saveSignedAgreement(signatureRequestId);
             hs.off('sign', handleSign);
           };
           hs.on('sign', handleSign);
@@ -207,15 +220,8 @@ export default function TenantDashboard() {
             skipDomainVerification: true,
           });
         } else {
-          // Fallback in case the HelloSign embedded library fails to load.
-          // Opening the signing URL directly requires the client ID to be
-          // provided as a query parameter, otherwise HelloSign responds with a
-          // "Missing parameter: client_id" error and the iframe attempts to
-          // postMessage with an empty origin. Append the client_id so that the
-          // signing page can initialise correctly even without the embedded
-          // script.
           const directUrl = `${signUrl}&client_id=${HELLOSIGN_CLIENT_ID}&skip_domain_verification=1`;
-          window.open(directUrl, '_blank');
+          window.location.href = directUrl;
         }
       };
 
