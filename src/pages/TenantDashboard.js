@@ -7,7 +7,7 @@ import { tenantNavItems } from '../constants/navItems';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { httpsCallable } from 'firebase/functions';
-import AlertModal from '../components/AlertModal
+import AlertModal from '../components/AlertModal;
 
 export default function TenantDashboard() {
   const navigate = useNavigate();
