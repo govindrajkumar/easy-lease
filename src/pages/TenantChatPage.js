@@ -90,6 +90,7 @@ export default function TenantChatPage() {
     }
     await addDoc(collection(db, 'Conversations', convId, 'Messages'), {
       senderUid: user.uid,
+      senderName: firstName,
       text: t,
       createdAt: serverTimestamp(),
       readBy: [user.uid],

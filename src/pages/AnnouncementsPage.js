@@ -60,16 +60,22 @@ export default function AnnouncementsPage() {
       }
       setTenants(tenantData);
 
-      const annSnap = await getDocs(
-        query(collection(db, 'Announcements'), where('landlord_id', '==', u.uid), orderBy('created_at', 'desc'))
+      const annQ = query(
+        collection(db, 'Announcements'),
+        where('landlord_id', '==', u.uid),
+        orderBy('created_at', 'desc')
       );
-      const anns = annSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setAnnouncements(anns);
-
-      anns.forEach((a) => {
-        const rq = query(collection(db, 'AnnouncementReactions'), where('announcementId', '==', a.id));
-        onSnapshot(rq, (rsnap) => {
-          setReactions((prev) => ({ ...prev, [a.id]: rsnap.size }));
+      onSnapshot(annQ, (annSnap) => {
+        const anns = annSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setAnnouncements(anns);
+        anns.forEach((a) => {
+          const rq = query(
+            collection(db, 'AnnouncementReactions'),
+            where('announcementId', '==', a.id)
+          );
+          onSnapshot(rq, (rsnap) => {
+            setReactions((prev) => ({ ...prev, [a.id]: rsnap.size }));
+          });
         });
       });
     });
@@ -80,7 +86,7 @@ export default function AnnouncementsPage() {
     e.preventDefault();
     if (!form.message.trim() || !user) return;
 
-    const annRef = await addDoc(collection(db, 'Announcements'), {
+    await addDoc(collection(db, 'Announcements'), {
       landlord_id: user.uid,
       target: form.target,
       property_id: form.target === 'property' ? form.propertyId : '',
@@ -89,7 +95,6 @@ export default function AnnouncementsPage() {
       created_at: serverTimestamp(),
     });
 
-    setAnnouncements([{ id: annRef.id, ...form, created_at: { seconds: Date.now() / 1000 } }, ...announcements]);
     setForm({ target: 'all', propertyId: '', tenantUid: '', message: '' });
   };
 
