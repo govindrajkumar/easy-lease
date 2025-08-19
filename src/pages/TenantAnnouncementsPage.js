@@ -47,23 +47,29 @@ export default function TenantAnnouncementsPage() {
       const prop = { id: propDoc.id, ...propDoc.data() };
       setProperty(prop);
 
-      const annSnap = await getDocs(
-        query(collection(db, 'Announcements'), where('landlord_id', '==', prop.landlord_id), orderBy('created_at', 'desc'))
+      const annQ = query(
+        collection(db, 'Announcements'),
+        where('landlord_id', '==', prop.landlord_id),
+        orderBy('created_at', 'desc')
       );
-      const data = annSnap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .filter(
-          (a) =>
-            a.target === 'all' ||
-            (a.target === 'property' && a.property_id === prop.id) ||
-            (a.target === 'tenant' && a.tenant_uid === u.uid)
-        );
-      setAnnouncements(data);
-
-      data.forEach((a) => {
-        const rq = query(collection(db, 'AnnouncementReactions'), where('announcementId', '==', a.id));
-        onSnapshot(rq, (rsnap) => {
-          setReactions((prev) => ({ ...prev, [a.id]: rsnap.size }));
+      onSnapshot(annQ, (annSnap) => {
+        const data = annSnap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter(
+            (a) =>
+              a.target === 'all' ||
+              (a.target === 'property' && a.property_id === prop.id) ||
+              (a.target === 'tenant' && a.tenant_uid === u.uid)
+          );
+        setAnnouncements(data);
+        data.forEach((a) => {
+          const rq = query(
+            collection(db, 'AnnouncementReactions'),
+            where('announcementId', '==', a.id)
+          );
+          onSnapshot(rq, (rsnap) => {
+            setReactions((prev) => ({ ...prev, [a.id]: rsnap.size }));
+          });
         });
       });
     });

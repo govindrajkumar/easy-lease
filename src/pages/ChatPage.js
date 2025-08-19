@@ -110,6 +110,7 @@ export default function ChatPage() {
     if (!t || !user || !activeConv) return;
     await addDoc(collection(db, 'Conversations', activeConv.id, 'Messages'), {
       senderUid: user.uid,
+      senderName: firstName,
       text: t,
       createdAt: serverTimestamp(),
       readBy: [user.uid],
