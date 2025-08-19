@@ -82,12 +82,19 @@ exports.notifyMaintenanceRequestChange = functions.firestore
     );
   });
 
-exports.notifyMessageCreated = functions.firestore
-  .document('Messages/{messageId}')
-  .onCreate(async (snap) => {
+exports.notifyConversationMessage = functions.firestore
+  .document('Conversations/{conversationId}/Messages/{messageId}')
+  .onCreate(async (snap, context) => {
     const data = snap.data();
+    const convSnap = await db
+      .collection('Conversations')
+      .doc(context.params.conversationId)
+      .get();
+    if (!convSnap.exists) return;
+    const participants = convSnap.data().participants || [];
+    const recipients = participants.filter((uid) => uid !== data.senderUid);
     await sendNotificationToUsers(
-      [data.to],
+      recipients,
       'New Message',
       data.text || 'You have a new message.'
     );
