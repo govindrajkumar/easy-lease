@@ -11,7 +11,6 @@ import {
   onSnapshot,
   setDoc,
   serverTimestamp,
-  orderBy,
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
 import AlertModal from '../components/AlertModal';
@@ -49,12 +48,12 @@ export default function TenantAnnouncementsPage() {
 
       const annQ = query(
         collection(db, 'Announcements'),
-        where('landlord_id', '==', prop.landlord_id),
-        orderBy('created_at', 'desc')
+        where('landlord_id', '==', prop.landlord_id)
       );
       onSnapshot(annQ, (annSnap) => {
         const data = annSnap.docs
           .map((d) => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0))
           .filter(
             (a) =>
               a.target === 'all' ||
