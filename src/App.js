@@ -10,11 +10,13 @@ const TenantDashboard = lazy(() => import('./pages/TenantDashboard'));
 const PropertiesPage = lazy(() => import('./pages/PropertiesPage'));
 const TenantsPage = lazy(() => import('./pages/TenantsPage'));
 const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
 const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
 const MaintenancePage = lazy(() => import('./pages/MaintenancePage'));
 const TenantPaymentsPage = lazy(() => import('./pages/TenantPaymentsPage'));
 const TenantMaintenancePage = lazy(() => import('./pages/TenantMaintenancePage'));
 const TenantAnnouncementsPage = lazy(() => import('./pages/TenantAnnouncementsPage'));
+const TenantChatPage = lazy(() => import('./pages/TenantChatPage'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const SignIn = lazy(() => import('./pages/Signin'));
 const TenantRequestsApprovalPage = lazy(() => import('./pages/TenantRequestsApprovalPage'));
@@ -48,6 +50,7 @@ function AnimatedRoutes() {
             <Route path="/landlord-dashboard" element={<AnimatedPage><LandlordDashboard /></AnimatedPage>} />
             <Route path="/properties" element={<AnimatedPage><PropertiesPage /></AnimatedPage>} />
             <Route path="/tenants" element={<AnimatedPage><TenantsPage /></AnimatedPage>} />
+            <Route path="/chat" element={<AnimatedPage><ChatPage /></AnimatedPage>} />
             <Route path="/announcements" element={<AnimatedPage><AnnouncementsPage /></AnimatedPage>} />
             <Route path="/payments" element={<AnimatedPage><PaymentsPage /></AnimatedPage>} />
             <Route path="/maintenance" element={<AnimatedPage><MaintenancePage /></AnimatedPage>} />
@@ -56,6 +59,7 @@ function AnimatedRoutes() {
             <Route path="/tenant-dashboard" element={<AnimatedPage><TenantDashboard /></AnimatedPage>} />
             <Route path="/tenant-payments" element={<AnimatedPage><TenantPaymentsPage /></AnimatedPage>} />
             <Route path="/tenant-maintenance" element={<AnimatedPage><TenantMaintenancePage /></AnimatedPage>} />
+            <Route path="/tenant-chat" element={<AnimatedPage><TenantChatPage /></AnimatedPage>} />
             <Route path="/tenant-announcements" element={<AnimatedPage><TenantAnnouncementsPage /></AnimatedPage>} />
             <Route path="/settings" element={<AnimatedPage><SettingsPage /></AnimatedPage>} />
             <Route path="/tenant-settings" element={<AnimatedPage><TenantSettingsPage /></AnimatedPage>} />

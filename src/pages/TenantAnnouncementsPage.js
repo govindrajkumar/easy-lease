@@ -1,10 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import MobileNav from '../components/MobileNav';
-import ChatBubble from '../components/ChatBubble';
-import AlertModal from '../components/AlertModal';
-import { tenantNavItems } from '../constants/navItems';
 import {
   collection,
   query,
@@ -12,80 +8,65 @@ import {
   getDocs,
   doc,
   getDoc,
-  addDoc,
-  serverTimestamp,
   onSnapshot,
+  setDoc,
+  serverTimestamp,
   orderBy,
-  updateDoc,
 } from 'firebase/firestore';
+import MobileNav from '../components/MobileNav';
+import AlertModal from '../components/AlertModal';
+import { tenantNavItems } from '../constants/navItems';
 
 export default function TenantAnnouncementsPage() {
   const [announcements, setAnnouncements] = useState([]);
-  const [replyMap, setReplyMap] = useState({});
+  const [reactions, setReactions] = useState({});
   const [firstName, setFirstName] = useState('');
   const [user, setUser] = useState(null);
   const [property, setProperty] = useState(null);
-  const [unreadMessages, setUnreadMessages] = useState(0);
-  const [landlordName, setLandlordName] = useState('');
-  const [activeId, setActiveId] = useState('');
-  const [messagesMap, setMessagesMap] = useState({});
-  const messageUnsubs = useRef({});
-  const navigate = useNavigate();
   const [alertMessage, setAlertMessage] = useState('');
+  const navigate = useNavigate();
 
-  const navItems = tenantNavItems({ active: 'announcements', unreadMessages });
+  const navItems = tenantNavItems({ active: 'announcements' });
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (u) => {
+    const unsub = auth.onAuthStateChanged(async (u) => {
       setUser(u);
-      if (u) {
-        const snap = await getDoc(doc(db, 'Users', u.uid));
-        if (snap.exists()) setFirstName(snap.data().first_name || '');
-        let propSnap = await getDocs(query(collection(db, 'Properties'), where('tenants', 'array-contains', u.uid)));
-        if (propSnap.empty) {
-          propSnap = await getDocs(query(collection(db, 'Properties'), where('tenant_uid', '==', u.uid)));
-        }
-        if (!propSnap.empty) {
-          const propDoc = propSnap.docs[0];
-          const prop = { id: propDoc.id, ...propDoc.data() };
-          setProperty(prop);
-          const lSnap = await getDoc(doc(db, 'Users', prop.landlord_id));
-          if (lSnap.exists()) setLandlordName(lSnap.data().first_name || '');
-          const annSnap = await getDocs(query(collection(db, 'Announcements'), where('landlord_id', '==', prop.landlord_id)));
-          const data = annSnap.docs
-            .map((d) => ({ id: d.id, ...d.data() }))
-            .filter((a) =>
-              a.target === 'all' ||
-              (a.target === 'property' && a.property_id === prop.id) ||
-              (a.target === 'tenant' && a.tenant_uid === u.uid)
-            )
-            .sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
-          setAnnouncements(data);
-        }
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+      if (!u) return;
 
-  useEffect(() => {
-    let unsubMessages;
-    const unsubAuth = auth.onAuthStateChanged((u) => {
-      if (unsubMessages) unsubMessages();
-      if (u) {
-        const q = query(
-          collection(db, 'Messages'),
-          where('recipientUid', '==', u.uid),
-          where('read', '==', false)
-        );
-        unsubMessages = onSnapshot(q, (snap) => setUnreadMessages(snap.size));
-      } else {
-        setUnreadMessages(0);
+      const snap = await getDoc(doc(db, 'Users', u.uid));
+      if (snap.exists()) setFirstName(snap.data().first_name || '');
+
+      let propSnap = await getDocs(query(collection(db, 'Properties'), where('tenants', 'array-contains', u.uid)));
+      if (propSnap.empty) {
+        propSnap = await getDocs(query(collection(db, 'Properties'), where('tenant_uid', '==', u.uid)));
       }
+      if (propSnap.empty) return;
+
+      const propDoc = propSnap.docs[0];
+      const prop = { id: propDoc.id, ...propDoc.data() };
+      setProperty(prop);
+
+      const annSnap = await getDocs(
+        query(collection(db, 'Announcements'), where('landlord_id', '==', prop.landlord_id), orderBy('created_at', 'desc'))
+      );
+      const data = annSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter(
+          (a) =>
+            a.target === 'all' ||
+            (a.target === 'property' && a.property_id === prop.id) ||
+            (a.target === 'tenant' && a.tenant_uid === u.uid)
+        );
+      setAnnouncements(data);
+
+      data.forEach((a) => {
+        const rq = query(collection(db, 'AnnouncementReactions'), where('announcementId', '==', a.id));
+        onSnapshot(rq, (rsnap) => {
+          setReactions((prev) => ({ ...prev, [a.id]: rsnap.size }));
+        });
+      });
     });
-    return () => {
-      if (unsubMessages) unsubMessages();
-      unsubAuth();
-    };
+    return () => unsub();
   }, []);
 
   const handleLogout = async () => {
@@ -93,61 +74,15 @@ export default function TenantAnnouncementsPage() {
     navigate('/signin');
   };
 
-  const sendReply = async (id) => {
-    const text = replyMap[id]?.trim();
-    const ann = announcements.find((a) => a.id === id);
-    if (!user || !ann || !text) return;
-    await addDoc(collection(db, 'Messages'), {
-      senderUid: user.uid,
-      recipientUid: ann.landlord_id,
-      text,
-      announcementId: id,
+  const addReaction = async (announcementId) => {
+    if (!user) return;
+    const id = `${announcementId}_${user.uid}`;
+    await setDoc(doc(db, 'AnnouncementReactions', id), {
+      announcementId,
+      uid: user.uid,
       createdAt: serverTimestamp(),
-      read: false,
     });
-    setReplyMap({ ...replyMap, [id]: '' });
-    setAlertMessage('Reply sent');
   };
-
-  const toggleAnnouncement = async (id) => {
-    if (activeId === id) {
-      if (messageUnsubs.current[id]) {
-        messageUnsubs.current[id]();
-        delete messageUnsubs.current[id];
-      }
-      setActiveId('');
-    } else {
-      setActiveId(id);
-      if (!messageUnsubs.current[id]) {
-        const q = query(
-          collection(db, 'Messages'),
-          where('announcementId', '==', id),
-          orderBy('createdAt')
-        );
-        messageUnsubs.current[id] = onSnapshot(q, (snap) => {
-          const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          setMessagesMap((prev) => ({ ...prev, [id]: msgs }));
-        });
-      }
-      if (user) {
-        const unreadSnap = await getDocs(
-          query(
-            collection(db, 'Messages'),
-            where('announcementId', '==', id),
-            where('recipientUid', '==', user.uid),
-            where('read', '==', false)
-          )
-        );
-        unreadSnap.forEach((d) => updateDoc(doc(db, 'Messages', d.id), { read: true }));
-      }
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      Object.values(messageUnsubs.current).forEach((unsub) => unsub());
-    };
-  }, []);
 
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
@@ -163,18 +98,21 @@ export default function TenantAnnouncementsPage() {
               Logout
             </button>
           </div>
-            <MobileNav navItems={navItems} handleLogout={handleLogout} />
+          <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
       </header>
 
       <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
         <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-[calc(100vh-5rem)] justify-between">
           <nav className="px-4 space-y-2 mt-4">
-            <a href="/tenant-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📄 Lease Info</a>
-            <a href="/tenant-payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments</a>
-            <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
-            <a href="/tenant-announcements" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">🔔 Announcements</a>
-            <a href="/tenant-settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👤 Profile &amp; Settings</a>
+            {navItems.map((item) => (
+              <a key={item.href} href={item.href} className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                <span className="mr-2">{item.icon}</span> {item.label}
+                {item.badge ? (
+                  <span className="ml-auto bg-purple-600 text-white rounded-full px-2 py-0.5 text-xs">{item.badge}</span>
+                ) : null}
+              </a>
+            ))}
           </nav>
           <div className="px-6 py-4 border-t dark:border-gray-700">
             <div className="flex items-center space-x-3">
@@ -188,52 +126,29 @@ export default function TenantAnnouncementsPage() {
         </aside>
 
         <div className="flex-1 p-6 overflow-y-auto space-y-4">
-          {announcements.map((a, idx) => (
-            <div
-              key={a.id}
-              onClick={() => toggleAnnouncement(a.id)}
-              className={`bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-xl transition cursor-pointer ${idx === 0 ? 'border-2 border-purple-600' : ''}`}
-            >
+          {announcements.map((a) => (
+            <div key={a.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
               <p className="font-medium">{a.message}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {a.created_at?.seconds ? new Date(a.created_at.seconds * 1000).toLocaleString() : ''}
+                {a.target === 'property' && ` • ${property?.address_line1 || ''}`}
+                {a.target === 'tenant' && ` • ${firstName}`}
               </p>
-              {activeId === a.id && (
-                <div className="mt-2 space-y-2">
-                  {(messagesMap[a.id] || []).map((m) => (
-                    <ChatBubble key={m.id} message={m} currentUid={user?.uid} />
-                  ))}
-                  {messagesMap[a.id] && messagesMap[a.id].length === 0 && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No conversation yet.</p>
-                  )}
-                  <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="text"
-                      placeholder="Reply"
-                      value={replyMap[a.id] || ''}
-                      onChange={(e) => setReplyMap({ ...replyMap, [a.id]: e.target.value })}
-                      className="flex-1 border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
-                    />
-                    <button
-                      className="px-3 py-2 bg-purple-600 text-white rounded"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        sendReply(a.id);
-                      }}
-                    >
-                      Send
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={() => addReaction(a.id)}
+                className="mt-2 flex items-center text-sm text-gray-600 dark:text-gray-300"
+              >
+                <span className="mr-1">👍</span> {reactions[a.id] || 0}
+              </button>
             </div>
           ))}
-          {announcements.length === 0 && (
-            <p className="text-gray-500 dark:text-gray-400 text-center">No announcements.</p>
-          )}
         </div>
       </div>
-      <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
+
+      {alertMessage && (
+        <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
+      )}
     </div>
   );
 }
+
