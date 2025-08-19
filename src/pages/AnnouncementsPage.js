@@ -1,23 +1,20 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../firebase';
 import {
-  doc,
-  getDoc,
   collection,
-  getDocs,
   query,
   where,
+  getDocs,
+  doc,
+  getDoc,
   addDoc,
-  deleteDoc,
+  setDoc,
   serverTimestamp,
-  orderBy,
   onSnapshot,
-  updateDoc
+  orderBy,
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
-import ChatBubble from '../components/ChatBubble';
 import AlertModal from '../components/AlertModal';
 import { landlordNavItems } from '../constants/navItems';
 
@@ -25,187 +22,91 @@ export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState([]);
   const [properties, setProperties] = useState([]);
   const [tenants, setTenants] = useState([]);
+  const [reactions, setReactions] = useState({});
   const [form, setForm] = useState({ target: 'all', propertyId: '', tenantUid: '', message: '' });
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState('');
-  const [filterProp, setFilterProp] = useState('');
-  const { darkMode } = useTheme();
-  const navigate = useNavigate();
-  const [activeId, setActiveId] = useState('');
-  const [messagesMap, setMessagesMap] = useState({});
-  const [replyMap, setReplyMap] = useState({});
-  const [unreadMessages, setUnreadMessages] = useState(0);
-  const messageUnsubs = useRef({});
   const [alertMessage, setAlertMessage] = useState('');
+  const [filterProp, setFilterProp] = useState('');
+  const navigate = useNavigate();
+
+  const navItems = landlordNavItems({ active: 'announcements' });
 
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/signin');
   };
 
-  const navItems = landlordNavItems({ active: 'announcements', unreadMessages });
-
-  const tenantMap = tenants.reduce((acc, t) => ({ ...acc, [t.id]: t.name }), {});
-  const propertyMap = properties.reduce(
-    (acc, p) => ({ ...acc, [p.id]: p.address_line1 }),
-    {}
-  );
-
-  const toggleAnnouncement = async (id) => {
-    if (activeId === id) {
-      if (messageUnsubs.current[id]) {
-        messageUnsubs.current[id]();
-        delete messageUnsubs.current[id];
-      }
-      setActiveId('');
-    } else {
-      setActiveId(id);
-      if (!messageUnsubs.current[id]) {
-        const q = query(
-          collection(db, 'Messages'),
-          where('announcementId', '==', id),
-          orderBy('createdAt')
-        );
-        messageUnsubs.current[id] = onSnapshot(q, (snap) => {
-          const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          setMessagesMap((prev) => ({ ...prev, [id]: msgs }));
-        });
-      }
-      if (user) {
-        const unreadSnap = await getDocs(
-          query(
-            collection(db, 'Messages'),
-            where('announcementId', '==', id),
-            where('recipientUid', '==', user.uid),
-            where('read', '==', false)
-          )
-        );
-        unreadSnap.forEach((d) => updateDoc(doc(db, 'Messages', d.id), { read: true }));
-      }
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      Object.values(messageUnsubs.current).forEach((unsub) => unsub());
-    };
-  }, []);
-
-  const sendReply = async (id) => {
-    const text = replyMap[id]?.trim();
-    const ann = announcements.find((a) => a.id === id);
-    if (!user || !ann || !text) return;
-    let recipients = [];
-    if (ann.target === 'tenant' && ann.tenant_uid) {
-      recipients = [ann.tenant_uid];
-    } else if (ann.target === 'property') {
-      recipients = tenants.filter((t) => t.propertyId === ann.property_id).map((t) => t.id);
-    } else {
-      recipients = tenants.map((t) => t.id);
-    }
-    await Promise.all(
-      recipients.map((rid) =>
-        addDoc(collection(db, 'Messages'), {
-          senderUid: user.uid,
-          recipientUid: rid,
-          text,
-          announcementId: id,
-          createdAt: serverTimestamp(),
-          read: false,
-        })
-      )
-    );
-    setReplyMap((prev) => ({ ...prev, [id]: '' }));
-    setAlertMessage('Reply sent');
-  };
-
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (u) => {
       setUser(u);
-      if (u) {
-        const snap = await getDoc(doc(db, 'Users', u.uid));
-        if (snap.exists()) setFirstName(snap.data().first_name || '');
+      if (!u) return;
 
-        const propSnap = await getDocs(query(collection(db, 'Properties'), where('landlord_id', '==', u.uid)));
-        const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setProperties(props);
+      const userSnap = await getDoc(doc(db, 'Users', u.uid));
+      if (userSnap.exists()) setFirstName(userSnap.data().first_name || '');
 
-        const tenantData = [];
-        for (const p of props) {
-          const tList = p.tenants || (p.tenant_uid ? [p.tenant_uid] : []);
-          for (const tid of tList) {
-            const tSnap = await getDoc(doc(db, 'Users', tid));
-            if (tSnap.exists()) {
-              tenantData.push({ id: tid, name: tSnap.data().first_name, propertyId: p.id });
-            }
-          }
+      const propSnap = await getDocs(query(collection(db, 'Properties'), where('landlord_id', '==', u.uid)));
+      const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setProperties(props);
+
+      const tenantData = [];
+      for (const p of props) {
+        const tList = p.tenants || (p.tenant_uid ? [p.tenant_uid] : []);
+        for (const tid of tList) {
+          const tSnap = await getDoc(doc(db, 'Users', tid));
+          if (tSnap.exists()) tenantData.push({ id: tid, name: tSnap.data().first_name, propertyId: p.id });
         }
-        setTenants(tenantData);
-
-        const annSnap = await getDocs(query(collection(db, 'Announcements'), where('landlord_id', '==', u.uid)));
-        setAnnouncements(annSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       }
+      setTenants(tenantData);
+
+      const annSnap = await getDocs(
+        query(collection(db, 'Announcements'), where('landlord_id', '==', u.uid), orderBy('created_at', 'desc'))
+      );
+      const anns = annSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setAnnouncements(anns);
+
+      anns.forEach((a) => {
+        const rq = query(collection(db, 'AnnouncementReactions'), where('announcementId', '==', a.id));
+        onSnapshot(rq, (rsnap) => {
+          setReactions((prev) => ({ ...prev, [a.id]: rsnap.size }));
+        });
+      });
     });
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, 'Messages'),
-      where('recipientUid', '==', user.uid),
-      where('read', '==', false)
-    );
-    const unsub = onSnapshot(q, (snap) => setUnreadMessages(snap.size));
-    return () => unsub();
-  }, [user]);
-
   const postAnnouncement = async (e) => {
     e.preventDefault();
-    if (!form.message.trim()) return;
-    try {
-      const annRef = await addDoc(collection(db, 'Announcements'), {
-        landlord_id: user.uid,
-        target: form.target,
-        property_id: form.target === 'property' ? form.propertyId : '',
-        tenant_uid: form.target === 'tenant' ? form.tenantUid : '',
-        message: form.message,
-        created_at: serverTimestamp(),
-      });
-      let recipients = [];
-      if (form.target === 'tenant' && form.tenantUid) {
-        recipients = [form.tenantUid];
-      } else if (form.target === 'property') {
-        recipients = tenants
-          .filter((t) => t.propertyId === form.propertyId)
-          .map((t) => t.id);
-      } else {
-        recipients = tenants.map((t) => t.id);
-      }
-      await Promise.all(
-        recipients.map((rid) =>
-          addDoc(collection(db, 'Messages'), {
-            senderUid: user.uid,
-            recipientUid: rid,
-            text: form.message,
-            announcementId: annRef.id,
-            createdAt: serverTimestamp(),
-            read: false,
-          })
-        )
-      );
-      const annSnap = await getDocs(query(collection(db, 'Announcements'), where('landlord_id', '==', user.uid)));
-      setAnnouncements(annSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setForm({ target: 'all', propertyId: '', tenantUid: '', message: '' });
-    } catch (err) {
-      console.error('Failed to post announcement', err);
-    }
+    if (!form.message.trim() || !user) return;
+
+    const annRef = await addDoc(collection(db, 'Announcements'), {
+      landlord_id: user.uid,
+      target: form.target,
+      property_id: form.target === 'property' ? form.propertyId : '',
+      tenant_uid: form.target === 'tenant' ? form.tenantUid : '',
+      message: form.message,
+      created_at: serverTimestamp(),
+    });
+
+    setAnnouncements([{ id: annRef.id, ...form, created_at: { seconds: Date.now() / 1000 } }, ...announcements]);
+    setForm({ target: 'all', propertyId: '', tenantUid: '', message: '' });
   };
 
-  const handleDelete = async (id) => {
-    await deleteDoc(doc(db, 'Announcements', id));
-    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+  const addReaction = async (announcementId) => {
+    if (!user) return;
+    const id = `${announcementId}_${user.uid}`;
+    await setDoc(doc(db, 'AnnouncementReactions', id), {
+      announcementId,
+      uid: user.uid,
+      createdAt: serverTimestamp(),
+    });
   };
+
+  const filteredAnnouncements = announcements.filter(
+    (a) => !filterProp || a.property_id === filterProp
+  );
+
+  const propertyMap = properties.reduce((acc, p) => ({ ...acc, [p.id]: p.address_line1 }), {});
 
   return (
     <div className="min-h-screen flex flex-col antialiased text-gray-800 bg-white dark:bg-gray-900 dark:text-gray-100">
@@ -221,21 +122,21 @@ export default function AnnouncementsPage() {
               Logout
             </button>
           </div>
-            <MobileNav navItems={navItems} handleLogout={handleLogout} />
+          <MobileNav navItems={navItems} handleLogout={handleLogout} />
         </div>
       </header>
 
       <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
         <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-[calc(100vh-5rem)] justify-between">
           <nav className="px-4 space-y-2 mt-4">
-            <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏠 Dashboard</a>
-            <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
-            <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
-            <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">🔔 Announcements</a>
-            <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
-            <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
-            <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📊 Analytics</a>
-            <a href="/settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">⚙️ Settings</a>
+            {navItems.map((item) => (
+              <a key={item.href} href={item.href} className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                <span className="mr-2">{item.icon}</span> {item.label}
+                {item.badge ? (
+                  <span className="ml-auto bg-purple-600 text-white rounded-full px-2 py-0.5 text-xs">{item.badge}</span>
+                ) : null}
+              </a>
+            ))}
           </nav>
           <div className="px-6 py-4 border-t dark:border-gray-700">
             <div className="flex items-center space-x-3">
@@ -248,139 +149,103 @@ export default function AnnouncementsPage() {
           </div>
         </aside>
 
-        <div className="flex-1 p-6 overflow-y-auto space-y-6">
-          <form onSubmit={postAnnouncement} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Target</label>
+        <div className="flex-1 p-6 overflow-y-auto space-y-4">
+          <form
+            onSubmit={postAnnouncement}
+            className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow space-y-4"
+          >
+            <textarea
+              value={form.message}
+              onChange={(e) => setForm({ ...form, message: e.target.value })}
+              className="w-full p-2 border rounded"
+              placeholder="Write an announcement..."
+            />
+            <div className="flex space-x-2">
               <select
                 value={form.target}
                 onChange={(e) => setForm({ ...form, target: e.target.value })}
-                className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+                className="p-2 border rounded"
               >
-                <option value="all">All Tenants</option>
-                <option value="property">Specific Property</option>
-                <option value="tenant">Individual Tenant</option>
+                <option value="all">All tenants</option>
+                <option value="property">Property</option>
+                <option value="tenant">Tenant</option>
               </select>
-            </div>
-            {form.target === 'property' && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Property</label>
+              {form.target === 'property' && (
                 <select
                   value={form.propertyId}
                   onChange={(e) => setForm({ ...form, propertyId: e.target.value })}
-                  className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+                  className="p-2 border rounded"
                 >
-                  <option value="" disabled>Select property</option>
+                  <option value="">Select property</option>
                   {properties.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
+                    <option key={p.id} value={p.id}>
+                      {p.address_line1}
+                    </option>
                   ))}
                 </select>
-              </div>
-            )}
-            {form.target === 'tenant' && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Tenant</label>
+              )}
+              {form.target === 'tenant' && (
                 <select
                   value={form.tenantUid}
                   onChange={(e) => setForm({ ...form, tenantUid: e.target.value })}
-                  className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+                  className="p-2 border rounded"
                 >
-                  <option value="" disabled>Select tenant</option>
+                  <option value="">Select tenant</option>
                   {tenants.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
                   ))}
                 </select>
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium mb-1">Message</label>
-              <textarea
-                value={form.message}
-                onChange={(e) => setForm({ ...form, message: e.target.value })}
-                className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
-              />
+              )}
+              <button
+                type="submit"
+                className="ml-auto px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Post
+              </button>
             </div>
-            <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
-              Post Announcement
-            </button>
           </form>
 
-          <select
-            value={filterProp}
-            onChange={(e) => setFilterProp(e.target.value)}
-            className="border rounded p-2 dark:bg-gray-900 dark:border-gray-700 mb-4"
-          >
-            <option value="">All Properties</option>
-            {properties.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-
-          <div className="space-y-4">
-            {announcements
-              .filter((a) => (filterProp ? a.property_id === filterProp : true))
-              .map((a) => (
-                <div
-                  key={a.id}
-                  className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow cursor-pointer"
-                  onClick={() => toggleAnnouncement(a.id)}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{a.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Target:{' '}
-                        {a.target === 'all'
-                          ? 'All tenants'
-                          : a.target === 'property'
-                          ? propertyMap[a.property_id] || a.property_id
-                          : `Tenant ${tenantMap[a.tenant_uid] || a.tenant_uid}`}
-                      </p>
-                    </div>
-                    <button
-                      className="text-red-500"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(a.id);
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                  {activeId === a.id && (
-                    <div className="mt-2 border-t pt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
-                      {(messagesMap[a.id] || []).map((m) => (
-                        <ChatBubble key={m.id} message={m} currentUid={user?.uid} />
-                      ))}
-                      {messagesMap[a.id] && messagesMap[a.id].length === 0 && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">No conversation yet.</p>
-                      )}
-                      <div className="flex space-x-2">
-                        <input
-                          type="text"
-                          value={replyMap[a.id] || ''}
-                          onChange={(e) => setReplyMap({ ...replyMap, [a.id]: e.target.value })}
-                          className="flex-1 border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
-                          placeholder="Reply"
-                        />
-                        <button
-                          className="px-3 py-2 bg-purple-600 text-white rounded"
-                          onClick={() => sendReply(a.id)}
-                        >
-                          Send
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+          <div className="flex items-center space-x-2">
+            <span>Filter:</span>
+            <select
+              value={filterProp}
+              onChange={(e) => setFilterProp(e.target.value)}
+              className="p-2 border rounded"
+            >
+              <option value="">All</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.address_line1}
+                </option>
               ))}
-            {announcements.length === 0 && (
-              <p className="text-gray-500 dark:text-gray-400">No announcements yet.</p>
-            )}
+            </select>
           </div>
+
+          {filteredAnnouncements.map((a) => (
+            <div key={a.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+              <p className="font-medium">{a.message}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {a.created_at?.seconds ? new Date(a.created_at.seconds * 1000).toLocaleString() : ''}
+                {a.target === 'property' && ` • ${propertyMap[a.property_id] || ''}`}
+                {a.target === 'tenant' && ` • ${tenants.find((t) => t.id === a.tenant_uid)?.name || ''}`}
+              </p>
+              <button
+                onClick={() => addReaction(a.id)}
+                className="mt-2 flex items-center text-sm text-gray-600 dark:text-gray-300"
+              >
+                <span className="mr-1">👍</span> {reactions[a.id] || 0}
+              </button>
+            </div>
+          ))}
         </div>
       </div>
-      <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
+
+      {alertMessage && (
+        <AlertModal message={alertMessage} onClose={() => setAlertMessage('')} />
+      )}
     </div>
   );
 }
+
