@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
 import ChatBubble from '../components/ChatBubble';
+import Sidebar from '../components/Sidebar';
 import { landlordNavItems } from '../constants/navItems';
 
 export default function ChatPage() {
@@ -25,9 +26,11 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [properties, setProperties] = useState([]);
+  const [tenants, setTenants] = useState([]);
   const [creating, setCreating] = useState(false);
   const [createTarget, setCreateTarget] = useState('all');
   const [createProp, setCreateProp] = useState('');
+  const [createTenant, setCreateTenant] = useState('');
   const navigate = useNavigate();
 
   // Load auth and conversations
@@ -42,6 +45,21 @@ export default function ChatPage() {
       );
       const props = propSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setProperties(props);
+
+      const tenantList = [];
+      const seen = new Set();
+      for (const p of props) {
+        const list = p.tenants || (p.tenant_uid ? [p.tenant_uid] : []);
+        for (const tid of list) {
+          if (seen.has(tid)) continue;
+          const tsnap = await getDoc(doc(db, 'Users', tid));
+          if (tsnap.exists()) {
+            seen.add(tid);
+            tenantList.push({ uid: tid, name: tsnap.data().first_name || 'Tenant' });
+          }
+        }
+      }
+      setTenants(tenantList);
 
       const q = query(
         collection(db, 'Conversations'),
@@ -103,13 +121,24 @@ export default function ChatPage() {
   const createConversation = async (e) => {
     e.preventDefault();
     if (!user) return;
+    if (createTarget === 'tenant' && createTenant) {
+      const convRef = await addDoc(collection(db, 'Conversations'), {
+        type: 'direct',
+        participants: [user.uid, createTenant],
+      });
+      setCreating(false);
+      setCreateTenant('');
+      setCreateTarget('all');
+      setActiveConv({ id: convRef.id, type: 'direct', participants: [user.uid, createTenant] });
+      return;
+    }
     let tenantUids = [];
     if (createTarget === 'all') {
       properties.forEach((p) => {
         const list = p.tenants || (p.tenant_uid ? [p.tenant_uid] : []);
         tenantUids.push(...list);
       });
-    } else if (createProp) {
+    } else if (createTarget === 'property' && createProp) {
       const prop = properties.find((p) => p.id === createProp);
       if (prop) {
         tenantUids = prop.tenants || (prop.tenant_uid ? [prop.tenant_uid] : []);
@@ -157,27 +186,7 @@ export default function ChatPage() {
       </header>
 
       <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
-        <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-[calc(100vh-5rem)] justify-between">
-          <nav className="px-4 space-y-2 mt-4">
-            {navItems.map((item) => (
-              <a key={item.href} href={item.href} className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                <span className="mr-2">{item.icon}</span> {item.label}
-                {item.badge ? (
-                  <span className="ml-auto bg-purple-600 text-white rounded-full px-2 py-0.5 text-xs">{item.badge}</span>
-                ) : null}
-              </a>
-            ))}
-          </nav>
-          <div className="px-6 py-4 border-t dark:border-gray-700">
-            <div className="flex items-center space-x-3">
-              <span className="text-xl">👤</span>
-              <div>
-                <div className="font-medium dark:text-gray-100">{firstName || 'User'}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">{user?.email || ''}</div>
-              </div>
-            </div>
-          </div>
-        </aside>
+        <Sidebar navItems={navItems} firstName={firstName} user={user} />
 
         <div className="flex-1 p-6 flex">
           {/* Conversation list */}
@@ -186,7 +195,7 @@ export default function ChatPage() {
               className="w-full px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
               onClick={() => setCreating(true)}
             >
-              + New Group
+              + New Chat
             </button>
             {conversations.map((c) => (
               <div
@@ -246,7 +255,7 @@ export default function ChatPage() {
             onSubmit={createConversation}
             className="bg-white dark:bg-gray-800 p-4 rounded space-y-4 w-full max-w-sm"
           >
-            <h3 className="text-lg font-medium">New Group</h3>
+            <h3 className="text-lg font-medium">New Chat</h3>
             <select
               value={createTarget}
               onChange={(e) => setCreateTarget(e.target.value)}
@@ -254,6 +263,7 @@ export default function ChatPage() {
             >
               <option value="all">All tenants</option>
               <option value="property">Specific property</option>
+              <option value="tenant">Specific tenant</option>
             </select>
             {createTarget === 'property' && (
               <select
@@ -265,6 +275,20 @@ export default function ChatPage() {
                 {properties.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.address_line1}
+                  </option>
+                ))}
+              </select>
+            )}
+            {createTarget === 'tenant' && (
+              <select
+                value={createTenant}
+                onChange={(e) => setCreateTenant(e.target.value)}
+                className="w-full border rounded p-2 dark:bg-gray-900 dark:border-gray-700"
+              >
+                <option value="">Select tenant</option>
+                {tenants.map((t) => (
+                  <option key={t.uid} value={t.uid}>
+                    {t.name}
                   </option>
                 ))}
               </select>

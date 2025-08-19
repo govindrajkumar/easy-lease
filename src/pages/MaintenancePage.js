@@ -17,6 +17,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
+import Sidebar from '../components/Sidebar';
 import { landlordNavItems } from '../constants/navItems';
 import AlertModal from '../components/AlertModal';
 
@@ -190,27 +191,7 @@ export default function MaintenancePage() {
       </header>
 
       <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
-        <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-[calc(100vh-5rem)] justify-between">
-          <nav className="px-4 space-y-2 mt-4">
-            <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏠 Dashboard</a>
-            <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
-            <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
-            <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
-            <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments & Billing</a>
-            <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">🛠️ Maintenance</a>
-            <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📊 Analytics</a>
-            <a href="/settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">⚙️ Settings</a>
-          </nav>
-          <div className="px-6 py-4 border-t dark:border-gray-700">
-            <div className="flex items-center space-x-3">
-              <span className="text-xl">👤</span>
-              <div>
-                <div className="font-medium dark:text-gray-100">{firstName || 'User'}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">{user?.email || ''}</div>
-              </div>
-            </div>
-          </div>
-        </aside>
+        <Sidebar navItems={navItems} firstName={firstName} user={user} />
 
         <div className="flex-1 p-6 overflow-y-auto space-y-4">
           <div className="flex items-center space-x-4 mb-4">
