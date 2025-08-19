@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { auth, db, storage } from '../firebase';
 import MobileNav from '../components/MobileNav';
+import Sidebar from '../components/Sidebar';
 import { tenantNavItems } from '../constants/navItems';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -330,29 +331,7 @@ export default function TenantDashboard() {
         <Header />
 
         <div className="flex flex-1">
-          <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg pt-20">
-            <nav className="flex-1 px-4 space-y-2">
-              <a href="/tenant-dashboard" className="flex items-center px-4 py-3 rounded-lg bg-purple-100 text-purple-700 dark:bg-gray-700 dark:text-purple-200">📄 Lease Info</a>
-              <a href="/tenant-payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments</a>
-              <a href="/tenant-maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance{unread > 0 && <span className="ml-2 bg-red-500 text-white rounded-full text-xs px-2">{unread}</span>}</a>
-              <a href="/tenant-announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                🔔 Announcements
-                {unreadMessages > 0 && (
-                  <span className="ml-2 bg-red-500 text-white rounded-full text-xs px-2">{unreadMessages}</span>
-                )}
-              </a>
-                <a href="/tenant-settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👤 Profile &amp; Settings</a>
-            </nav>
-            <div className="px-6 py-4 border-t dark:border-gray-700">
-              <div className="flex items-center space-x-3">
-                <span className="text-xl">👤</span>
-                <div>
-                  <div className="font-medium dark:text-gray-100">{userFirstName || "User"}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">{userEmail || ""}</div>
-                </div>
-              </div>
-            </div>
-          </aside>
+        <Sidebar navItems={navItems} firstName={userFirstName} user={{ email: userEmail }} />
 
           <div className="flex-1 flex flex-col">
             <main className="flex-1 p-6 overflow-y-auto space-y-8 pt-24">

@@ -15,6 +15,7 @@ import {
   arrayUnion,
 } from 'firebase/firestore';
 import MobileNav from '../components/MobileNav';
+import Sidebar from '../components/Sidebar';
 import { landlordNavItems } from '../constants/navItems';
 import AlertModal from '../components/AlertModal';
 
@@ -172,18 +173,7 @@ export default function TenantRequestsApprovalPage() {
 
       <div className="flex pt-20 min-h-[calc(100vh-5rem)]">
         {/* Sidebar */}
-        <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-lg min-h-[calc(100vh-5rem)] justify-between">
-          <nav className="px-4 space-y-2 mt-4">
-            <a href="/landlord-dashboard" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏠 Dashboard</a>
-            <a href="/properties" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🏢 Properties</a>
-            <a href="/tenants" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">👥 Tenants</a>
-            <a href="/announcements" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🔔 Announcements</a>
-            <a href="/payments" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">💳 Payments</a>
-            <a href="/maintenance" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">🛠️ Maintenance</a>
-            <a href="/analytics" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">📊 Analytics</a>
-            <a href="/settings" className="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">⚙️ Settings</a>
-          </nav>
-        </aside>
+        <Sidebar navItems={navItems} firstName={firstName} user={user} />
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col p-6">
