@@ -182,9 +182,32 @@ export default function TenantDashboard() {
         }
       };
 
-      const openHelloSign = () => {
-        if (window && window.HelloSign && window.HelloSign.open) {
-          const hs = window.HelloSign;
+      const ensureHelloSign = () =>
+        new Promise((resolve, reject) => {
+          if (window.HelloSign && window.HelloSign.open) {
+            resolve(window.HelloSign);
+            return;
+          }
+
+          const existing = document.querySelector('script[data-hs-embed]');
+          if (existing) {
+            existing.addEventListener('load', () => resolve(window.HelloSign));
+            existing.addEventListener('error', () => reject(new Error('Failed to load HelloSign script')));
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = 'https://cdn.hellosign.com/public/js/embedded/v2.3.1/embedded.production.min.js';
+          script.async = true;
+          script.dataset.hsEmbed = 'true';
+          script.onload = () => resolve(window.HelloSign);
+          script.onerror = () => reject(new Error('Failed to load HelloSign script'));
+          document.body.appendChild(script);
+        });
+
+      const openHelloSign = async () => {
+        try {
+          const hs = await ensureHelloSign();
           const handleSign = async () => {
             await saveSignedAgreement();
             hs.off('sign', handleSign);
@@ -195,20 +218,13 @@ export default function TenantDashboard() {
             clientId: HELLOSIGN_CLIENT_ID,
             skipDomainVerification: true,
           });
-        } else {
-          // Fallback in case the HelloSign embedded library fails to load.
-          // Opening the signing URL directly requires the client ID to be
-          // provided as a query parameter, otherwise HelloSign responds with a
-          // "Missing parameter: client_id" error and the iframe attempts to
-          // postMessage with an empty origin. Append the client_id so that the
-          // signing page can initialise correctly even without the embedded
-          // script.
-          const directUrl = `${signUrl}&client_id=${HELLOSIGN_CLIENT_ID}&skip_domain_verification=1`;
-          window.open(directUrl, '_blank');
+        } catch (e) {
+          console.error('HelloSign script failed to load', e);
+          setUploadMessage('Unable to load signing component. Please try again.');
         }
       };
 
-      openHelloSign();
+      await openHelloSign();
     } catch (err) {
       console.error('Error initiating HelloSign', err);
     }
