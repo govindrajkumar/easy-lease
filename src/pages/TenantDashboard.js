@@ -8,6 +8,7 @@ import { tenantNavItems } from '../constants/navItems';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import AlertModal from '../components/AlertModal';
+import HelloSign from 'hellosign-embedded';
 
 export default function TenantDashboard() {
   const navigate = useNavigate();
@@ -182,63 +183,18 @@ export default function TenantDashboard() {
         }
       };
 
-      const ensureHelloSign = () =>
-        new Promise((resolve, reject) => {
-          const SCRIPT_SRC =
-            'https://cdn.hellosign.com/public/js/embedded/v2.3.1/embedded.production.min.js';
-
-          const start = Date.now();
-          const timeout = 30000; // wait up to 30s before failing
-
-          const check = () => {
-            if (window.HelloSign && window.HelloSign.open) {
-              resolve(window.HelloSign);
-            } else if (Date.now() - start > timeout) {
-              reject(new Error('Failed to load HelloSign script'));
-            } else {
-              setTimeout(check, 500);
-            }
-          };
-
-          const inject = () => {
-            let script = document.querySelector('script[data-hs-embed]');
-            if (!script) {
-              script = document.createElement('script');
-              script.src = SCRIPT_SRC;
-              script.async = true;
-              script.dataset.hsEmbed = 'true';
-              script.onerror = () => {
-                script.remove();
-                setTimeout(inject, 1000);
-              };
-              document.body.appendChild(script);
-            }
-          };
-
-          inject();
-          check();
-        });
-
-      const openHelloSign = async () => {
-        try {
-          const hs = await ensureHelloSign();
-          const handleSign = async () => {
-            await saveSignedAgreement();
-            hs.off('sign', handleSign);
-          };
-          hs.on('sign', handleSign);
-          hs.open({
-            url: signUrl,
-            clientId: HELLOSIGN_CLIENT_ID,
-            skipDomainVerification: true,
-          });
-        } catch (e) {
-          console.error('HelloSign script failed to load', e);
-          setUploadMessage('Unable to load signing component. Please try again.');
-        }
-      };
-
-      await openHelloSign();
+      try {
+        const client = new HelloSign({ clientId: HELLOSIGN_CLIENT_ID });
+        const handleSign = async () => {
+          await saveSignedAgreement();
+          client.off('sign', handleSign);
+        };
+        client.on('sign', handleSign);
+        client.open(signUrl, { skipDomainVerification: true });
+      } catch (e) {
+        console.error('Failed to launch HelloSign', e);
+        setUploadMessage('Unable to load signing component. Please try again.');
+      }
     } catch (err) {
       console.error('Error initiating HelloSign', err);
     }
