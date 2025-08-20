@@ -10,6 +10,7 @@ import {
   getDoc,
   addDoc,
   setDoc,
+  deleteDoc,
   serverTimestamp,
   onSnapshot,
 } from 'firebase/firestore';
@@ -108,6 +109,17 @@ export default function AnnouncementsPage() {
     });
   };
 
+  const deleteAnnouncement = async (announcementId) => {
+    await deleteDoc(doc(db, 'Announcements', announcementId));
+    const rsnap = await getDocs(
+      query(
+        collection(db, 'AnnouncementReactions'),
+        where('announcementId', '==', announcementId)
+      )
+    );
+    rsnap.forEach((d) => deleteDoc(d.ref));
+  };
+
   const filteredAnnouncements = announcements.filter(
     (a) => !filterProp || a.property_id === filterProp
   );
@@ -143,14 +155,14 @@ export default function AnnouncementsPage() {
             <textarea
               value={form.message}
               onChange={(e) => setForm({ ...form, message: e.target.value })}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded dark:bg-gray-700 dark:text-gray-100"
               placeholder="Write an announcement..."
             />
             <div className="flex space-x-2">
               <select
                 value={form.target}
                 onChange={(e) => setForm({ ...form, target: e.target.value })}
-                className="p-2 border rounded"
+                className="p-2 border rounded dark:bg-gray-700 dark:text-gray-100"
               >
                 <option value="all">All tenants</option>
                 <option value="property">Property</option>
@@ -160,7 +172,7 @@ export default function AnnouncementsPage() {
                 <select
                   value={form.propertyId}
                   onChange={(e) => setForm({ ...form, propertyId: e.target.value })}
-                  className="p-2 border rounded"
+                  className="p-2 border rounded dark:bg-gray-700 dark:text-gray-100"
                 >
                   <option value="">Select property</option>
                   {properties.map((p) => (
@@ -174,7 +186,7 @@ export default function AnnouncementsPage() {
                 <select
                   value={form.tenantUid}
                   onChange={(e) => setForm({ ...form, tenantUid: e.target.value })}
-                  className="p-2 border rounded"
+                  className="p-2 border rounded dark:bg-gray-700 dark:text-gray-100"
                 >
                   <option value="">Select tenant</option>
                   {tenants.map((t) => (
@@ -198,7 +210,7 @@ export default function AnnouncementsPage() {
             <select
               value={filterProp}
               onChange={(e) => setFilterProp(e.target.value)}
-              className="p-2 border rounded"
+              className="p-2 border rounded dark:bg-gray-700 dark:text-gray-100"
             >
               <option value="">All</option>
               {properties.map((p) => (
@@ -217,12 +229,17 @@ export default function AnnouncementsPage() {
                 {a.target === 'property' && ` • ${propertyMap[a.property_id] || ''}`}
                 {a.target === 'tenant' && ` • ${tenants.find((t) => t.id === a.tenant_uid)?.name || ''}`}
               </p>
-              <button
-                onClick={() => addReaction(a.id)}
-                className="mt-2 flex items-center text-sm text-gray-600 dark:text-gray-300"
-              >
-                <span className="mr-1">👍</span> {reactions[a.id] || 0}
-              </button>
+              <div className="mt-2 flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                <button onClick={() => addReaction(a.id)} className="flex items-center">
+                  <span className="mr-1">👍</span> {reactions[a.id] || 0}
+                </button>
+                <button
+                  onClick={() => deleteAnnouncement(a.id)}
+                  className="text-red-600 dark:text-red-400"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>
