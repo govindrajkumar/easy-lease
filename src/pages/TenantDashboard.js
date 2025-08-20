@@ -184,25 +184,39 @@ export default function TenantDashboard() {
 
       const ensureHelloSign = () =>
         new Promise((resolve, reject) => {
-          if (window.HelloSign && window.HelloSign.open) {
-            resolve(window.HelloSign);
-            return;
-          }
+          const SCRIPT_SRC =
+            'https://cdn.hellosign.com/public/js/embedded/v2.3.1/embedded.production.min.js';
 
-          const existing = document.querySelector('script[data-hs-embed]');
-          if (existing) {
-            existing.addEventListener('load', () => resolve(window.HelloSign));
-            existing.addEventListener('error', () => reject(new Error('Failed to load HelloSign script')));
-            return;
-          }
+          const start = Date.now();
+          const timeout = 30000; // wait up to 30s before failing
 
-          const script = document.createElement('script');
-          script.src = 'https://cdn.hellosign.com/public/js/embedded/v2.3.1/embedded.production.min.js';
-          script.async = true;
-          script.dataset.hsEmbed = 'true';
-          script.onload = () => resolve(window.HelloSign);
-          script.onerror = () => reject(new Error('Failed to load HelloSign script'));
-          document.body.appendChild(script);
+          const check = () => {
+            if (window.HelloSign && window.HelloSign.open) {
+              resolve(window.HelloSign);
+            } else if (Date.now() - start > timeout) {
+              reject(new Error('Failed to load HelloSign script'));
+            } else {
+              setTimeout(check, 500);
+            }
+          };
+
+          const inject = () => {
+            let script = document.querySelector('script[data-hs-embed]');
+            if (!script) {
+              script = document.createElement('script');
+              script.src = SCRIPT_SRC;
+              script.async = true;
+              script.dataset.hsEmbed = 'true';
+              script.onerror = () => {
+                script.remove();
+                setTimeout(inject, 1000);
+              };
+              document.body.appendChild(script);
+            }
+          };
+
+          inject();
+          check();
         });
 
       const openHelloSign = async () => {
