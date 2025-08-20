@@ -237,12 +237,12 @@ export default function LandlordDashboard() {
         </div>
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 pt-20 min-h-[calc(100vh-5rem)]">
         {/* Sidebar (Desktop) */}
         <Sidebar navItems={navItems} firstName={firstName} user={user} />
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
-          <main className="flex-1 p-6 overflow-y-auto space-y-8 pt-24">
+          <main className="flex-1 p-6 overflow-y-auto space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Rent Collected */}
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
