@@ -294,7 +294,7 @@ export default function PropertiesPage() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 antialiased">
+    <div className="flex pt-20 min-h-[calc(100vh-5rem)] overflow-hidden bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 antialiased">
       {/* Sidebar */}
         <Sidebar navItems={navItems} firstName={firstName} user={user} />
 
@@ -330,7 +330,7 @@ export default function PropertiesPage() {
         </header>
 
         {/* Properties Table */}
-        <main className="pt-24 p-6 overflow-auto mx-6">
+        <main className="p-6 overflow-auto mx-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {properties.map((prop) => (
               <div key={prop.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
