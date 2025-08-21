@@ -166,7 +166,9 @@ export default function TenantDashboard() {
         const delay = (ms) => new Promise((res) => setTimeout(res, ms));
         try {
           let fileUrl;
-          for (let attempt = 0; attempt < 5 && !fileUrl; attempt++) {
+          // The signed document can take a few moments to be available on HelloSign's servers.
+          // Retry multiple times before giving up to reduce false failures seen by tenants.
+          for (let attempt = 0; attempt < 10 && !fileUrl; attempt++) {
             const fileResp = await fetch(
               `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf&get_url=1`,
               {
@@ -183,9 +185,17 @@ export default function TenantDashboard() {
                 break;
               }
             }
-            await delay(2000);
+            // Wait a bit before trying again as the file may still be processing
+            await delay(3000);
           }
-          if (!fileUrl) throw new Error('Failed to fetch signed file');
+
+          if (!fileUrl) {
+            setUploadMessage(
+              'Agreement processing. Please refresh in a moment to see the signed copy.'
+            );
+            return;
+          }
+
           const pdfResp = await fetch(fileUrl);
           const blob = await pdfResp.blob();
           const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
@@ -196,7 +206,7 @@ export default function TenantDashboard() {
           setUploadMessage('Agreement signed successfully.');
         } catch (err) {
           console.error('Failed to save signed agreement', err);
-          setUploadMessage('Failed to save signed agreement.');
+          setUploadMessage('Failed to save signed agreement. Please try again.');
         }
       };
 
