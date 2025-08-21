@@ -185,11 +185,11 @@ export default function TenantDashboard() {
 
       try {
         const client = new HelloSign({ clientId: HELLOSIGN_CLIENT_ID });
-        const handleSign = async () => {
+        const handleFinish = async () => {
           await saveSignedAgreement();
-          client.off('sign', handleSign);
+          client.off('finish', handleFinish);
         };
-        client.on('sign', handleSign);
+        client.on('finish', handleFinish);
         client.open(signUrl, { skipDomainVerification: true });
       } catch (e) {
         console.error('Failed to launch HelloSign', e);
