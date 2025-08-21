@@ -163,13 +163,29 @@ export default function TenantDashboard() {
 
       // Helper to download the signed PDF from HelloSign and persist it in Firebase Storage
       const saveSignedAgreement = async () => {
+        const delay = (ms) => new Promise((res) => setTimeout(res, ms));
         try {
-          const fileResp = await fetch(
-            `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf&get_url=1`,
-            { headers: { Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':') } }
-          );
-          if (!fileResp.ok) throw new Error('Failed to fetch signed file');
-          const { file_url: fileUrl } = await fileResp.json();
+          let fileUrl;
+          for (let attempt = 0; attempt < 5 && !fileUrl; attempt++) {
+            const fileResp = await fetch(
+              `https://api.hellosign.com/v3/signature_request/files/${signatureRequestId}?file_type=pdf&get_url=1`,
+              {
+                headers: {
+                  Authorization: 'Basic ' + btoa(HELLOSIGN_API_KEY + ':'),
+                  Accept: 'application/json',
+                },
+              }
+            );
+            if (fileResp.ok) {
+              const data = await fileResp.json();
+              if (data.file_url) {
+                fileUrl = data.file_url;
+                break;
+              }
+            }
+            await delay(2000);
+          }
+          if (!fileUrl) throw new Error('Failed to fetch signed file');
           const pdfResp = await fetch(fileUrl);
           const blob = await pdfResp.blob();
           const fileRef = ref(storage, `signed_leases/${lease.id}.pdf`);
@@ -180,6 +196,7 @@ export default function TenantDashboard() {
           setUploadMessage('Agreement signed successfully.');
         } catch (err) {
           console.error('Failed to save signed agreement', err);
+          setUploadMessage('Failed to save signed agreement.');
         }
       };
 
